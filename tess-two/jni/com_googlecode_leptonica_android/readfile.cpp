@@ -58,7 +58,7 @@ jlong Java_com_googlecode_leptonica_android_ReadFile_nativeReadBytes8(JNIEnv *en
 
   pixGetDimensions(pix, &w, &h, &d);
 
-  LOGE("Created image width w=%d, h=%d, d=%d", w, h, d);
+  LOGI("Created image with w=%d, h=%d, d=%d", w, h, d);
 
   return (jlong) pix;
 }
@@ -93,30 +93,6 @@ jboolean Java_com_googlecode_leptonica_android_ReadFile_nativeReplaceBytes8(JNIE
   return JNI_TRUE;
 }
 
-jlong Java_com_googlecode_leptonica_android_ReadFile_nativeReadFiles(JNIEnv *env, jclass clazz,
-                                                                     jstring dirName, jstring prefix) {
-  PIXA *pixad = NULL;
-
-  const char *c_dirName = env->GetStringUTFChars(dirName, NULL);
-  if (c_dirName == NULL) {
-    LOGE("could not extract dirName string!");
-    return (jlong) NULL;
-  }
-
-  const char *c_prefix = env->GetStringUTFChars(prefix, NULL);
-  if (c_prefix == NULL) {
-    LOGE("could not extract prefix string!");
-    return (jlong) NULL;
-  }
-
-  pixad = pixaReadFiles(c_dirName, c_prefix);
-
-  env->ReleaseStringUTFChars(dirName, c_dirName);
-  env->ReleaseStringUTFChars(prefix, c_prefix);
-
-  return (jlong) pixad;
-}
-
 jlong Java_com_googlecode_leptonica_android_ReadFile_nativeReadFile(JNIEnv *env, jclass clazz,
                                                                     jstring fileName) {
   PIX *pixd = NULL;
@@ -142,17 +118,17 @@ jlong Java_com_googlecode_leptonica_android_ReadFile_nativeReadBitmap(JNIEnv *en
   int ret;
 
   if ((ret = AndroidBitmap_getInfo(env, bitmap, &info)) < 0) {
-    LOGE("AndroidBitmap_getInfo() failed ! error=%d", ret);
+    LOGE("AndroidBitmap_getInfo() failed! error=%d", ret);
     return (jlong) NULL;
   }
 
   if (info.format != ANDROID_BITMAP_FORMAT_RGBA_8888) {
-    LOGE("Bitmap format is not RGBA_8888 !");
+    LOGE("Bitmap format is not RGBA_8888!");
     return (jlong) NULL;
   }
 
   if ((ret = AndroidBitmap_lockPixels(env, bitmap, &pixels)) < 0) {
-    LOGE("AndroidBitmap_lockPixels() failed ! error=%d", ret);
+    LOGE("AndroidBitmap_lockPixels() failed! error=%d", ret);
     return (jlong) NULL;
   }
 
