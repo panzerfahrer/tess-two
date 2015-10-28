@@ -29,16 +29,17 @@ import java.io.File;
  */
 public class ReadFile {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
     private static final String LOG_TAG = ReadFile.class.getSimpleName();
-    
+
     /**
-     * Creates a 32bpp Pix object from encoded data. Supported formats are BMP
-     * and JPEG.
+     * Creates a 32bpp Pix object from encoded data. Supported formats are BMP,
+     * JPEG, and PNG.
      *
-     * @param encodedData JPEG or BMP encoded byte data.
+     * @param encodedData BMP, JPEG, or PNG encoded byte data.
      * @return a 32bpp Pix object
      */
     public static Pix readMem(byte[] encodedData) {
@@ -109,16 +110,17 @@ public class ReadFile {
         if (pixs.getWidth() != width)
             throw new IllegalArgumentException("Source pix width does not match image width");
         if (pixs.getHeight() != height)
-            throw new IllegalArgumentException("Source pix width does not match image width");
+            throw new IllegalArgumentException("Source pix height does not match image height");
 
-        return nativeReplaceBytes8(pixs.mNativePix, pixelData, width, height);
+        return nativeReplaceBytes8(pixs.getNativePix(), pixelData, width, 
+                height);
     }
 
     /**
-     * Creates a Pix object from encoded file data. Supported formats are BMP
-     * and JPEG.
+     * Creates a Pix object from encoded file data. Supported formats are BMP,
+     * JPEG, and PNG.
      *
-     * @param file The JPEG or BMP-encoded file to read in as a Pix.
+     * @param file The BMP, JPEG, or PNG-encoded file to read in as a Pix.
      * @return a Pix object
      */
     public static Pix readFile(File file) {
@@ -134,13 +136,13 @@ public class ReadFile {
             Log.e(LOG_TAG, "Cannot read file");
             return null;
         }
-        
+
         final long nativePix = nativeReadFile(file.getAbsolutePath());
 
         if (nativePix != 0) {
             return new Pix(nativePix);
         }
-        
+
         final BitmapFactory.Options opts = new BitmapFactory.Options();
         opts.inPreferredConfig = Bitmap.Config.ARGB_8888;
 

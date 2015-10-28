@@ -25,6 +25,7 @@ import android.graphics.Rect;
  */
 public class Pix {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -38,14 +39,12 @@ public class Pix {
     public static final int INDEX_D = 2;
 
     /** Package-accessible pointer to native pix */
-    final long mNativePix;
+    private final long mNativePix;
 
     private boolean mRecycled;
 
     /**
-     * Creates a new Pix wrapper for the specified native PIX object. Never call
-     * this twice on the same native pointer, because finalize() will attempt to
-     * free native memory twice.
+     * Creates a new Pix wrapper for the specified native PIX object.
      *
      * @param nativePix A pointer to the native PIX object.
      */
@@ -53,7 +52,7 @@ public class Pix {
         mNativePix = nativePix;
         mRecycled = false;
     }
-    
+
     public Pix(int width, int height, int depth) {
         if (width <= 0 || height <= 0) {
             throw new IllegalArgumentException("Pix width and height must be > 0");
@@ -73,6 +72,9 @@ public class Pix {
      * @return a native pointer to the Pix object
      */
     public long getNativePix() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return mNativePix;
     }
 
@@ -83,6 +85,9 @@ public class Pix {
      * @return a copy of this PIX object's raw data
      */
     public byte[] getData() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         byte[] buffer = nativeGetData(mNativePix);
 
         if (buffer == null) {
@@ -99,7 +104,10 @@ public class Pix {
      *         failure
      */
     public int[] getDimensions() {
-        int[] dimensions = new int[4];
+        if (mRecycled)
+            throw new IllegalStateException();
+
+        int[] dimensions = new int[3];
 
         if (getDimensions(dimensions)) {
             return dimensions;
@@ -116,6 +124,9 @@ public class Pix {
      * @return <code>true</code> on success
      */
     public boolean getDimensions(int[] dimensions) {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return nativeGetDimensions(mNativePix, dimensions);
     }
 
@@ -127,6 +138,9 @@ public class Pix {
      */
     @Override
     public Pix clone() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         long nativePix = nativeClone(mNativePix);
 
         if (nativePix == 0) {
@@ -143,6 +157,9 @@ public class Pix {
      * @return a copy of the Pix
      */
     public Pix copy() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         long nativePix = nativeCopy(mNativePix);
 
         if (nativePix == 0) {
@@ -158,6 +175,9 @@ public class Pix {
      * @return <code>true</code> on success
      */
     public boolean invert() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return nativeInvert(mNativePix);
     }
 
@@ -171,13 +191,6 @@ public class Pix {
 
             mRecycled = true;
         }
-    }
-
-    @Override
-    protected void finalize() throws Throwable {
-        recycle();
-
-        super.finalize();
     }
 
     /**
@@ -217,6 +230,9 @@ public class Pix {
      * @return the width of this Pix
      */
     public int getWidth() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return nativeGetWidth(mNativePix);
     }
 
@@ -226,6 +242,9 @@ public class Pix {
      * @return the height of this Pix
      */
     public int getHeight() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return nativeGetHeight(mNativePix);
     }
 
@@ -235,9 +254,16 @@ public class Pix {
      * @return the depth of this Pix
      */
     public int getDepth() {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         return nativeGetDepth(mNativePix);
     }
-    
+
+    public int getRefCount() {
+        return nativeGetRefCount(mNativePix);
+    }
+
     /**
      * Returns the {@link android.graphics.Color} at the specified location.
      *
@@ -248,10 +274,13 @@ public class Pix {
      * @throws IllegalArgumentException If x, y exceeds the image bounds.
      */
     public int getPixel(int x, int y) {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         if (x < 0 || x >= getWidth()) {
             throw new IllegalArgumentException("Supplied x coordinate exceeds image bounds");
         } else if (y < 0 || y >= getHeight()) {
-            throw new IllegalArgumentException("Supplied x coordinate exceeds image bounds");
+            throw new IllegalArgumentException("Supplied y coordinate exceeds image bounds");
         }
 
         return nativeGetPixel(mNativePix, x, y);
@@ -267,10 +296,13 @@ public class Pix {
      * @throws IllegalArgumentException If x, y exceeds the image bounds.
      */
     public void setPixel(int x, int y, int color) {
+        if (mRecycled)
+            throw new IllegalStateException();
+
         if (x < 0 || x >= getWidth()) {
             throw new IllegalArgumentException("Supplied x coordinate exceeds image bounds");
         } else if (y < 0 || y >= getHeight()) {
-            throw new IllegalArgumentException("Supplied x coordinate exceeds image bounds");
+            throw new IllegalArgumentException("Supplied y coordinate exceeds image bounds");
         }
 
         nativeSetPixel(mNativePix, x, y, color);
@@ -280,6 +312,7 @@ public class Pix {
     // * NATIVE CODE *
     // ***************
 
+    private static native int nativeGetRefCount(long nativePix);
     private static native long nativeCreatePix(int w, int h, int d);
     private static native long nativeCreateFromData(byte[] data, int w, int h, int d);
     private static native byte[] nativeGetData(long nativePix);

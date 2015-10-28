@@ -33,6 +33,7 @@ import com.googlecode.tesseract.android.TessBaseAPI.PageIteratorLevel;
  */
 public class ResultIterator extends PageIterator {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
         System.loadLibrary("tess");
     }
@@ -112,8 +113,17 @@ public class ResultIterator extends PageIterator {
         return pairedResults;
     }
 
+    /**
+     * Deletes the iterator after use
+     */
+    public void delete() {
+        nativeDelete(mNativeResultIterator);
+        return;
+    }
+    
     private static native String[] nativeGetChoices(long nativeResultIterator, int level);
 
     private static native String nativeGetUTF8Text(long nativeResultIterator, int level);
     private static native float nativeConfidence(long nativeResultIterator, int level);
+    private static native void nativeDelete(long nativeIterator);
 }

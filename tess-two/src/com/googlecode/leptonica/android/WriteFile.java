@@ -25,6 +25,7 @@ import java.io.File;
  */
 public class WriteFile {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -40,15 +41,15 @@ public class WriteFile {
 
         int size = pixs.getWidth() * pixs.getHeight();
 
-        if (pixs.getDepth() != 8) {
-            Pix pix8 = Convert.convertTo8(pixs);
-            pixs.recycle();
-            pixs = pix8;
-        }
-
         byte[] data = new byte[size];
 
-        writeBytes8(pixs, data);
+        if (pixs.getDepth() != 8) {
+            Pix pix8 = Convert.convertTo8(pixs);
+            writeBytes8(pix8, data);
+            pix8.recycle();
+        } else {
+            writeBytes8(pixs, data);
+        }
 
         return data;
     }
@@ -69,14 +70,14 @@ public class WriteFile {
         if (data.length < size)
             throw new IllegalArgumentException("Data array must be large enough to hold image bytes");
 
-        int bytesWritten = nativeWriteBytes8(pixs.mNativePix, data);
+        int bytesWritten = nativeWriteBytes8(pixs.getNativePix(), data);
 
         return bytesWritten;
     }
 
     /**
      * Writes a Pix to file using the file extension as the output format;
-     * the only supported format is .bmp for bitmap.
+     * supported formats are .bmp and .png.
      * <p>
      * Notes:
      * <ol>
@@ -93,7 +94,8 @@ public class WriteFile {
         if (file == null)
             throw new IllegalArgumentException("File must be non-null");
 
-        return nativeWriteImpliedFormat(pixs.mNativePix, file.getAbsolutePath());
+        return nativeWriteImpliedFormat(pixs.getNativePix(),
+                file.getAbsolutePath());
     }
 
     /**
@@ -115,7 +117,7 @@ public class WriteFile {
         final Bitmap.Config config = Bitmap.Config.ARGB_8888;
         final Bitmap bitmap = Bitmap.createBitmap(width, height, config);
 
-        if (nativeWriteBitmap(pixs.mNativePix, bitmap)) {
+        if (nativeWriteBitmap(pixs.getNativePix(), bitmap)) {
             return bitmap;
         }
 

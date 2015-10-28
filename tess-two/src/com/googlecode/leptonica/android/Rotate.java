@@ -21,6 +21,7 @@ package com.googlecode.leptonica.android;
  */
 public class Rotate {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -51,7 +52,7 @@ public class Rotate {
     public static Pix rotate(Pix pixs, float degrees, boolean quality) {
         return rotate(pixs, degrees, quality, true);
     }
-    
+
     /**
      * Performs basic image rotation about the center.
      * <p>
@@ -82,7 +83,8 @@ public class Rotate {
         if (pixs == null)
             throw new IllegalArgumentException("Source pix must be non-null");
 
-        long nativePix = nativeRotate(pixs.mNativePix, degrees, quality, resize);
+        long nativePix = nativeRotate(pixs.getNativePix(), degrees, quality, 
+                resize);
 
         if (nativePix == 0)
             return null;
@@ -103,7 +105,7 @@ public class Rotate {
         if (quads < 0 || quads > 3)
             throw new IllegalArgumentException("quads not in {0,1,2,3}");
 
-        int nativePix = nativeRotateOrth(pixs.mNativePix, quads);
+        int nativePix = nativeRotateOrth(pixs.getNativePix(), quads);
 
         if (nativePix == 0)
             return null;
@@ -118,5 +120,5 @@ public class Rotate {
     private static native int nativeRotateOrth(long nativePix, int quads);
 
     private static native long nativeRotate(long nativePix, float degrees, boolean quality,
-    		boolean resize);
+            boolean resize);
 }

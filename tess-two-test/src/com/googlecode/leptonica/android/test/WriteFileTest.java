@@ -29,8 +29,17 @@ import com.googlecode.leptonica.android.WriteFile;
 
 public class WriteFileTest extends TestCase {
     @SmallTest
-    public void testWriteBitmap() {
+    public void testWriteBitmap_1x1() {
         testWriteBitmap(1, 1);
+    }
+
+    @SmallTest
+    public void testWriteBitmap_100x100() {
+        testWriteBitmap(100, 100);
+    }
+
+    @SmallTest
+    public void testWriteBitmap_640x480() {
         testWriteBitmap(640, 480);
     }
 
@@ -49,8 +58,17 @@ public class WriteFileTest extends TestCase {
     }
 
     @SmallTest
-    public void testWriteBytes8() {
+    public void testWriteBytes8_1x1() {
         testWriteBytes8(1, 1);
+    }
+
+    @SmallTest
+    public void testWriteBytes8_100x100() {
+        testWriteBytes8(100, 100);
+    }
+
+    @SmallTest
+    public void testWriteBytes8_640x480() {
         testWriteBytes8(640, 480);
     }
 
@@ -74,6 +92,15 @@ public class WriteFileTest extends TestCase {
         Pix pixs = TestUtils.createTestPix(100, 100);
         File file = File.createTempFile("testWriteImpliedFormat", ".bmp");
         testWriteImpliedFormat(pixs, file);
+        pixs.recycle();
+    }
+
+    @SmallTest
+    public void testWriteImpliedFormat_png() throws IOException {
+        Pix pixs = TestUtils.createTestPix(100, 100);
+        File file = File.createTempFile("testWriteImpliedFormat", ".png");
+        testWriteImpliedFormat(pixs, file);
+        pixs.recycle();
     }
 
     private void testWriteImpliedFormat(Pix pixs, File file) {
@@ -88,7 +115,6 @@ public class WriteFileTest extends TestCase {
         assertNotNull("Pix is null", pixd);
 
         float match = TestUtils.comparePix(pixs, pixd);
-        pixs.recycle();
         pixd.recycle();
 
         assertTrue("Images do not match.", (match >= 0.99f));

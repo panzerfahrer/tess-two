@@ -22,6 +22,7 @@
 #include "baseapi.h"
 #include "ocrclass.h"
 #include "allheaders.h"
+#include "renderer.h"
 
 static jfieldID field_mNativeData;
 static jmethodID method_onProgressValues;
@@ -32,6 +33,7 @@ struct native_data_t {
   void *data;
   bool debug;
 
+  Box* currentTextBox = NULL;
   l_int32 lastProgress;
   bool cancel_ocr;
 
@@ -47,6 +49,10 @@ struct native_data_t {
     }
   }
 
+  void setTextBoundaries(l_uint32 x, l_uint32 y, l_uint32 width, l_uint32 height) {
+    boxSetGeometry(currentTextBox, x, y, width, height);
+  }
+
   void initStateVariables(JNIEnv* env, jobject *object) {
     cancel_ocr = false;
     cachedEnv = env;
@@ -59,9 +65,11 @@ struct native_data_t {
     cachedEnv = NULL;
     cachedObject = NULL;
     lastProgress = 0;
+    boxSetGeometry(currentTextBox, 0, 0, 0, 0);
   }
 
   native_data_t() {
+    currentTextBox = boxCreate(0, 0, 0, 0);
     lastProgress = 0;
     pix = NULL;
     data = NULL;
@@ -69,6 +77,10 @@ struct native_data_t {
     cachedEnv = NULL;
     cachedObject = NULL;
     cancel_ocr = false;
+  }
+
+  ~native_data_t() {
+	  boxDestroy(&currentTextBox);
   }
 };
 
@@ -86,11 +98,13 @@ bool cancelFunc(void* cancel_this, int words) {
 bool progressJavaCallback(void* progress_this, int progress, int left, int right,
 		int top, int bottom) {
   native_data_t *nat = (native_data_t*)progress_this;
-
-  if (nat->isStateValid()) {
+  if (nat->isStateValid() && nat->currentTextBox != NULL) {
     if (progress > nat->lastProgress || left != 0 || right != 0 || top != 0 || bottom != 0) {
+      int x, y, width, height;
+      boxGetGeometry(nat->currentTextBox, &x, &y, &width, &height);
       nat->cachedEnv->CallVoidMethod(*(nat->cachedObject), method_onProgressValues, progress,
-              (jint) left, (jint) right, (jint) top, (jint) bottom);
+              (jint) left, (jint) right, (jint) top, (jint) bottom,
+              (jint) x, (jint) (x + width), (jint) (y + height), (jint) y);
       nat->lastProgress = progress;
     }
   }
@@ -120,7 +134,7 @@ void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeClassInit(JNIEnv* e
                                                                        jclass clazz) {
 
   field_mNativeData = env->GetFieldID(clazz, "mNativeData", "J");
-  method_onProgressValues = env->GetMethodID(clazz, "onProgressValues", "(IIIII)V");
+  method_onProgressValues = env->GetMethodID(clazz, "onProgressValues", "(IIIIIIIII)V");
 }
 
 void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeConstruct(JNIEnv* env,
@@ -134,25 +148,6 @@ void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeConstruct(JNIEnv* e
   }
 
   env->SetLongField(object, field_mNativeData, (jlong) nat);
-}
-
-void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeFinalize(JNIEnv* env,
-                                                                      jobject object) {
-
-  native_data_t *nat = get_native_data(env, object);
-
-  // Since Tesseract doesn't take ownership of the memory, we keep a pointer in the native
-  // code struct. We need to free that pointer when we release our instance of Tesseract or
-  // attempt to set a new image using one of the nativeSet* methods.
-  if (nat->data != NULL)
-    free(nat->data);
-  else if (nat->pix != NULL)
-    pixDestroy(&nat->pix);
-  nat->data = NULL;
-  nat->pix = NULL;
-
-  if (nat != NULL)
-    delete nat;
 }
 
 jboolean Java_com_googlecode_tesseract_android_TessBaseAPI_nativeInit(JNIEnv *env,
@@ -261,6 +256,11 @@ void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeSetImagePix(JNIEnv 
   PIX *pixd = pixClone(pixs);
 
   native_data_t *nat = get_native_data(env, thiz);
+  if (pixd) {
+    l_int32 width = pixGetWidth(pixd);
+    l_int32 height = pixGetHeight(pixd);
+    nat->setTextBoundaries(0, 0, width, height);
+  }
   nat->api.SetImage(pixd);
 
   // Since Tesseract doesn't take ownership of the memory, we keep a pointer in the native
@@ -282,6 +282,8 @@ void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeSetRectangle(JNIEnv
                                                                           jint height) {
 
   native_data_t *nat = get_native_data(env, thiz);
+
+  nat->setTextBoundaries(left, top, width, height);
 
   nat->api.SetRectangle(left, top, width, height);
 }
@@ -586,6 +588,74 @@ void Java_com_googlecode_tesseract_android_TessBaseAPI_nativeReadConfigFile(JNIE
   nat->api.ReadConfigFile(c_file_name);
   env->ReleaseStringUTFChars(fileName, c_file_name);
 }
+
+jlong Java_com_googlecode_tesseract_android_TessPdfRenderer_nativeCreate(JNIEnv *env,
+                                                                         jobject thiz,
+                                                                         jobject jTessBaseApi,
+                                                                         jstring outputPath) {
+  native_data_t *nat = get_native_data(env, jTessBaseApi);
+  const char *c_output_path = env->GetStringUTFChars(outputPath, NULL);
+
+  tesseract::TessPDFRenderer* result = new tesseract::TessPDFRenderer(c_output_path, nat->api.GetDatapath());
+
+  env->ReleaseStringUTFChars(outputPath, c_output_path);
+
+  return (jlong) result;
+}
+
+void Java_com_googlecode_tesseract_android_TessPdfRenderer_nativeRecycle(JNIEnv *env,
+                                                                         jobject thiz,
+                                                                         jlong jPointer) {
+  tesseract::TessPDFRenderer* renderer = (tesseract::TessPDFRenderer*) jPointer;
+  delete renderer;
+}
+
+jboolean Java_com_googlecode_tesseract_android_TessBaseAPI_nativeBeginDocument(JNIEnv *env,
+                                                                               jobject thiz,
+                                                                               jlong jRenderer,
+                                                                               jstring title) {
+
+  const char *c_title = env->GetStringUTFChars(title, NULL);
+  tesseract::TessPDFRenderer* pdfRenderer = (tesseract::TessPDFRenderer*) jRenderer;
+
+  jboolean res = JNI_TRUE;
+
+  if (pdfRenderer->BeginDocument(c_title)) {
+    res = JNI_FALSE;
+  }
+
+  env->ReleaseStringUTFChars(title, c_title);
+
+  return res;
+}
+
+jboolean Java_com_googlecode_tesseract_android_TessBaseAPI_nativeEndDocument(JNIEnv *env,
+                                                                             jobject thiz,
+                                                                             jlong jRenderer) {
+
+  tesseract::TessPDFRenderer* pdfRenderer = (tesseract::TessPDFRenderer*) jRenderer;
+  return pdfRenderer->EndDocument();
+}
+
+jboolean Java_com_googlecode_tesseract_android_TessBaseAPI_nativeAddPageToDocument(JNIEnv *env,
+                                                                                   jobject thiz,
+                                                                                   jlong jPix,
+                                                                                   jstring jPath,
+                                                                                   jlong jRenderer) {
+
+  tesseract::TessPDFRenderer* pdfRenderer = (tesseract::TessPDFRenderer*) jRenderer;
+
+  native_data_t *nat = get_native_data(env, thiz);
+  PIX* pix = (PIX*) jPix;
+  const char *inputImage = env->GetStringUTFChars(jPath, NULL);
+
+  nat->api.ProcessPage(pix, 0, inputImage, NULL, 0, pdfRenderer);
+
+  env->ReleaseStringUTFChars(jPath, inputImage);
+
+  return true;
+}
+
 #ifdef __cplusplus
 }
 #endif

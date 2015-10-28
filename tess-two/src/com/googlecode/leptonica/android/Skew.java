@@ -23,11 +23,12 @@ package com.googlecode.leptonica.android;
  */
 public class Skew {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
     // Text alignment defaults
-    
+
     /** Default range for sweep, will detect rotation of + or - 30 degrees. */
     public final static float SWEEP_RANGE = 30.0f;
 
@@ -84,8 +85,8 @@ public class Skew {
         if (pixs == null)
             throw new IllegalArgumentException("Source pix must be non-null");
 
-        return nativeFindSkew(pixs.mNativePix, sweepRange, sweepDelta, sweepReduction,
-                searchReduction, searchMinDelta);
+        return nativeFindSkew(pixs.getNativePix(), sweepRange, sweepDelta,
+                sweepReduction, searchReduction, searchMinDelta);
     }
 
     // ***************
