@@ -1,10 +1,10 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
-apply plugin: 'com.android.library'
+apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion Integer.parseInt(project.ANDROID_BUILD_SDK_VERSION)
-    buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
+    compileSdkVersion 23
+    buildToolsVersion "23.0.2"
 
     defaultConfig {
         minSdkVersion 8
@@ -23,22 +23,23 @@ android {
     sourceSets {
         main {
             manifest.srcFile 'AndroidManifest.xml'
-                java.srcDirs = ['src']
-                res.srcDirs = ['res']
-                jniLibs.srcDirs = ['libs']
+            aidl.srcDirs = ['src']
+            java.srcDirs = ['src']
+            res.srcDirs = ['res']
+            jniLibs.srcDirs = ['libs']
         }
     }
 
     // call regular ndk-build(.cmd) script from app directory
     task ndkBuild(type: Exec) {
         workingDir = file("${android.sdkDirectory}/ndk-bundle")
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                commandLine 'ndk-build.cmd', '-C', file('.').absolutePath,
-				'-j', Runtime.runtime.availableProcessors()
-            } else {
-                commandLine './ndk-build', '-C', file('.').absolutePath,
-				'-j', Runtime.runtime.availableProcessors()
-            }
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            commandLine 'ndk-build.cmd', '-C', file('.').absolutePath,
+			'-j', Runtime.runtime.availableProcessors()
+        } else {
+            commandLine './ndk-build', '-C', file('.').absolutePath,
+			'-j', Runtime.runtime.availableProcessors()
+        }
     }
 
     tasks.withType(JavaCompile) {
@@ -48,18 +49,24 @@ android {
     // cleanup task
     task ndkClean(type: Exec) {
         workingDir = file("${android.sdkDirectory}/ndk-bundle")
-            if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                commandLine 'ndk-build.cmd', '-C', file('.').absolutePath, 'clean'
-            } else {
-                commandLine './ndk-build', '-C', file('.').absolutePath, 'clean'
-            }
+        if (Os.isFamily(Os.FAMILY_WINDOWS)) {
+            commandLine 'ndk-build.cmd', '-C', file('.').absolutePath, 'clean'
+        } else {
+            commandLine './ndk-build', '-C', file('.').absolutePath, 'clean'
+        }
     }
 
     tasks.withType(Delete) {
         cleanTask -> cleanTask.dependsOn ndkClean
     } 
+
+    lintOptions {
+        abortOnError false
+    }
+
 }
 
 dependencies {
+    compile project(':tess-two');
     compile fileTree(dir: 'libs', include: ['*.jar'])
 }
