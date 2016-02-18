@@ -41,9 +41,9 @@ android {
             }
     }
 
-    tasks.withType(JavaCompile) {
+    /*tasks.withType(JavaCompile) {
         compileTask -> compileTask.dependsOn ndkBuild
-    }
+    }*/
 
     // cleanup task
     task ndkClean(type: Exec) {
@@ -55,9 +55,9 @@ android {
             }
     }
 
-    tasks.withType(Delete) {
+    /*tasks.withType(Delete) {
         cleanTask -> cleanTask.dependsOn ndkClean
-    } 
+    }*/
 }
 
 dependencies {
