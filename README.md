@@ -25,7 +25,7 @@ The `tess-two-test` subdirectory contains Android JUnit tests.
 
 ## Pre-requisites
 
-* Android 2.2 or higher
+* Android 2.3 or higher
 * A v3.02+ [trained data file][tessdata] for a language. Data files must be 
 extracted to the Android device in a subdirectory named `tessdata`.
 

@@ -1,13 +1,15 @@
 import org.apache.tools.ant.taskdefs.condition.Os
 
 apply plugin: 'com.android.library'
+apply plugin: 'com.github.dcendents.android-maven'
+apply plugin: 'com.jfrog.bintray'
 
 android {
     compileSdkVersion Integer.parseInt(project.ANDROID_BUILD_SDK_VERSION)
     buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
 
     defaultConfig {
-        minSdkVersion 8
+        minSdkVersion 9
         targetSdkVersion 23
         versionCode 1
         versionName "1.0"
@@ -57,4 +59,76 @@ android {
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
+}
+
+
+// Settings for uploading module AAR to Bintray for library distribution
+
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    classifier = 'sources'
+}
+
+task javadoc(type: Javadoc) {
+    source = android.sourceSets.main.java.srcDirs
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+    options {
+        links "http://docs.oracle.com/javase/7/docs/api/"
+        linksOffline "http://d.android.com/reference","${android.sdkDirectory}/docs/reference"
+    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+install {
+    repositories.mavenInstaller {
+        pom.project {
+            name = 'tess-two'
+
+            packaging = 'aar'
+            groupId = 'com.rmtheis'
+            artifactId = 'tess-two'
+
+            developers {
+                developer {
+                    id = 'rmtheis'
+                    name = 'Robert Theis'
+                    email = 'robert.m.theis@gmail.com'
+                }
+            }
+            licenses {
+                license {
+                    name = 'The Apache Software License, Version 2.0'
+                    url = 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    distribution = 'repo'
+                }
+            }
+            scm {
+                url 'https://github.com/rmtheis/tess-two'
+            }
+        }
+    }
+}
+
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
+bintray {
+    user = properties.getProperty("bintray.user")
+    key = properties.getProperty("bintray.apikey")
+    configurations = ['archives']
+    pkg {
+        repo = 'maven'
+        name = 'tess-two'
+        userOrg = user
+        publish = true
+    }
 }
