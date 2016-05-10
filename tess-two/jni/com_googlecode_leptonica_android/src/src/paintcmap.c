@@ -274,7 +274,7 @@ PIXCMAP   *cmap;
         boxDestroy(&box);
     }
 
-    LEPT_FREE(map);
+    FREE(map);
     return 0;
 }
 
@@ -444,7 +444,7 @@ PIXCMAP   *cmap;
         }
     }
 
-    LEPT_FREE(map);
+    FREE(map);
     return 0;
 }
 

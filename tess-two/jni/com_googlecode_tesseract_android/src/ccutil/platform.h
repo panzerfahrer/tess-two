@@ -29,9 +29,7 @@
 #endif  /* __GNUC__ */
 #define SIGNED
 #if defined(_MSC_VER)
-#if (_MSC_VER < 1900)
 #define snprintf _snprintf
-#endif
 #if (_MSC_VER <= 1400)
 #define vsnprintf _vsnprintf
 #endif /* (_MSC_VER <= 1400) */
@@ -47,7 +45,7 @@
 #define SIGNED signed
 #endif
 
-#if defined(_WIN32) || defined(__CYGWIN__)
+#ifdef _WIN32
 #ifndef M_PI
 #define M_PI 3.14159265358979323846
 #endif

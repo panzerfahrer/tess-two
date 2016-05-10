@@ -19,7 +19,7 @@
 
 #ifndef           DRAWEDG_H
 #define           DRAWEDG_H
-#ifndef GRAPHICS_DISABLED
+#ifndef ANDROID_BUILD
 
 #include          "scrollview.h"
 #include          "crakedge.h"

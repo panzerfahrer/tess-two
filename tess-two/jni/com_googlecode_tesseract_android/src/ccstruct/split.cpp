@@ -25,11 +25,6 @@
 /*----------------------------------------------------------------------
               I n c l u d e s
 ----------------------------------------------------------------------*/
-// Include automatically generated configuration file if running autoconf.
-#ifdef HAVE_CONFIG_H
-#include "config_auto.h"
-#endif
-
 #include "split.h"
 #include "coutln.h"
 #include "tprintf.h"
@@ -225,8 +220,10 @@ void remove_edgept(EDGEPT *point) {
  * Shows the coordinates of both points in a split.
  **********************************************************************/
 void SPLIT::Print() const {
-  tprintf("(%d,%d)--(%d,%d)", point1->pos.x, point1->pos.y, point2->pos.x,
-          point2->pos.y);
+  if (this != NULL) {
+    tprintf("(%d,%d)--(%d,%d)", point1->pos.x, point1->pos.y, point2->pos.x,
+            point2->pos.y);
+  }
 }
 
 #ifndef GRAPHICS_DISABLED

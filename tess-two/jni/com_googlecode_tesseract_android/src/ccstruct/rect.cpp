@@ -29,7 +29,7 @@
  *
  **********************************************************************/
 
-TBOX::TBOX(                   //constructor
+TBOX::TBOX(                   //construtor
          const ICOORD pt1,  //one corner
          const ICOORD pt2   //the other corner
         ) {

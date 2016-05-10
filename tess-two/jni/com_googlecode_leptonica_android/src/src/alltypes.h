@@ -42,7 +42,6 @@
 #include "list.h"
 #include "ptra.h"
 #include "queue.h"
-#include "rbtree.h"
 #include "stack.h"
 
     /* Imaging */

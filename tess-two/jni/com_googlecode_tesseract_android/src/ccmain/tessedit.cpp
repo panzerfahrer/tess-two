@@ -19,11 +19,6 @@
  *
  **********************************************************************/
 
-// Include automatically generated configuration file if running autoconf.
-#ifdef HAVE_CONFIG_H
-#include "config_auto.h"
-#endif
-
 #include          "stderr.h"
 #include          "basedir.h"
 #include          "tessvars.h"
@@ -205,7 +200,7 @@ bool Tesseract::init_tesseract_lang_data(
   // engine-specific data files need to be loaded. Currently everything needs
   // the base tesseract data, which supplies other useful information, but
   // alternative engines, such as cube and LSTM are optional.
-#ifndef NO_CUBE_BUILD
+#ifndef ANDROID_BUILD
   if (tessedit_ocr_engine_mode == OEM_CUBE_ONLY) {
     ASSERT_HOST(init_cube_objects(false, &tessdata_manager));
     if (tessdata_manager_debug_level)

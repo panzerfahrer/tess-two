@@ -32,7 +32,7 @@ typedef uinT32 *BIT_VECTOR;
 -----------------------------------------------------------------------------*/
 #define zero_all_bits(array,length) \
 {\
-    int index;                        /*temporary index*/\
+    register int            index;                        /*temporary index*/\
 \
 for (index=0;index<length;index++)\
     array[index]=0;                                        /*zero all bits*/\
@@ -40,7 +40,7 @@ for (index=0;index<length;index++)\
 
 #define set_all_bits(array,length) \
 {\
-    int index;                        /*temporary index*/\
+    register int            index;                        /*temporary index*/\
 \
 for (index=0;index<length;index++)\
     array[index]= ~0;                                    /*set all bits*/\
@@ -48,7 +48,7 @@ for (index=0;index<length;index++)\
 
 #define copy_all_bits(source,dest,length) \
 {\
-    int index;                        /*temporary index*/\
+    register int            index;                        /*temporary index*/\
 \
 for (index=0;index<length;index++)\
     dest[index]=source[index];                            /*copy all bits*/\

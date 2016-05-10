@@ -24,7 +24,7 @@
 #include <stdio.h>
 
 /*-------------------------------------------------------------------------
-        Public Function Prototype
+        Public Funtion Prototype
 --------------------------------------------------------------------------*/
 uinT16 ReadSampleSize(FILE *File);
 

@@ -122,7 +122,7 @@ PIX       *pixd;
     }
 
     if (intab == NULL)
-        LEPT_FREE(tab);
+        FREE(tab);
     return pixd;
 }
 
@@ -170,27 +170,27 @@ l_uint8  *tab;
 
     pix1 = pixReduceRankBinary2(pixs, level1, tab);
     if (level2 <= 0) {
-        LEPT_FREE(tab);
+        FREE(tab);
         return pix1;
     }
 
     pix2 = pixReduceRankBinary2(pix1, level2, tab);
     pixDestroy(&pix1);
     if (level3 <= 0) {
-        LEPT_FREE(tab);
+        FREE(tab);
         return pix2;
     }
 
     pix3 = pixReduceRankBinary2(pix2, level3, tab);
     pixDestroy(&pix2);
     if (level4 <= 0) {
-        LEPT_FREE(tab);
+        FREE(tab);
         return pix3;
     }
 
     pix4 = pixReduceRankBinary2(pix3, level4, tab);
     pixDestroy(&pix3);
-    LEPT_FREE(tab);
+    FREE(tab);
     return pix4;
 }
 
@@ -361,7 +361,7 @@ PIX       *pixd;
     }
 
     if (!intab)
-        LEPT_FREE(tab);
+        FREE(tab);
     return pixd;
 }
 
@@ -382,7 +382,7 @@ l_int32   i;
 
     PROCNAME("makeSubsampleTab2x");
 
-    if ((tab = (l_uint8 *) LEPT_CALLOC(256, sizeof(l_uint8))) == NULL)
+    if ((tab = (l_uint8 *) CALLOC(256, sizeof(l_uint8))) == NULL)
         return (l_uint8 *)ERROR_PTR("tab not made", procName, NULL);
 
     for (i = 0; i < 256; i++)

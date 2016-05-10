@@ -16,6 +16,10 @@
 #
 # USAGE: source tesstrain_utils.sh
 
+FONTS=(
+    "Arial" \
+    "Times New Roman," \
+)
 if [ "$(uname)" == "Darwin" ];then
     FONTS_DIR="/Library/Fonts/"
 else
@@ -25,7 +29,7 @@ OUTPUT_DIR="/tmp/tesstrain/tessdata"
 OVERWRITE=0
 RUN_SHAPE_CLUSTERING=0
 EXTRACT_FONT_PROPERTIES=1
-WORKSPACE_DIR=`mktemp -d`
+WORKSPACE_DIR="/tmp/tesstrain"
 
 # Logging helper functions.
 tlog() {
@@ -41,11 +45,11 @@ err_exit() {
 # if the program file is not found.
 # Usage: run_command CMD ARG1 ARG2...
 run_command() {
-    local cmd=`which $1`
-    if [[ -z ${cmd} ]]; then
-        err_exit "$1 not found"
-    fi
+    local cmd=$1
     shift
+    if [[ ! -x ${cmd} ]]; then
+        err_exit "File ${cmd} not found"
+    fi
     tlog "[$(date)] ${cmd} $@"
     ${cmd} "$@" 2>&1 1>&2 | tee -a ${LOG_FILE}
     # check completion status
@@ -63,6 +67,22 @@ check_file_readable() {
             err_exit "${file} does not exist or is not readable"
         fi
     done
+}
+
+# Set global path variables that are based on parsed flags.
+set_prog_paths() {
+    if [[ -z ${BINDIR} ]]; then
+        err_exit "Need to specify location of program files"
+    fi
+    CN_TRAINING_EXE=${BINDIR}/cntraining
+    COMBINE_TESSDATA_EXE=${BINDIR}/combine_tessdata
+    MF_TRAINING_EXE=${BINDIR}/mftraining
+    SET_UNICHARSET_PROPERTIES_EXE=${BINDIR}/set_unicharset_properties
+    SHAPE_TRAINING_EXE=${BINDIR}/shapeclustering
+    TESSERACT_EXE=${BINDIR}/tesseract
+    TEXT2IMAGE_EXE=${BINDIR}/text2image
+    UNICHARSET_EXTRACTOR_EXE=${BINDIR}/unicharset_extractor
+    WORDLIST2DAWG_EXE=${BINDIR}/wordlist2dawg
 }
 
 # Sets the named variable to given value. Aborts if the value is missing or
@@ -89,27 +109,18 @@ parse_flags() {
         case ${ARGV[$i]} in
             --)
                 break;;
-            --fontlist)
-		fn=0
-		FONTS=""
-                while test $j -lt ${#ARGV[@]}; do
-                    test -z "${ARGV[$j]}" && break
-                    test `echo ${ARGV[$j]} | cut -c -2` = "--" && break
-                    FONTS[$fn]="${ARGV[$j]}"
-                    fn=$((fn+1))
-                    j=$((j+1))
-                done
-                i=$((j-1)) ;;
-            --exposures)
-                exp=""
-                while test $j -lt ${#ARGV[@]}; do
-                    test -z "${ARGV[$j]}" && break
-                    test `echo ${ARGV[$j]} | cut -c -2` = "--" && break
-                    exp="$exp ${ARGV[$j]}"
-                    j=$((j+1))
-                done
-                parse_value "EXPOSURES" "$exp"
-                i=$((j-1)) ;;
+            --bin_dir)
+                parse_value "BINDIR" ${ARGV[$j]}
+                i=$j ;;
+            --fontlist)   # Expect a plus-separated list of names
+                if [[ -z ${ARGV[$j]} ]] || [[ ${ARGV[$j]:0:2} == "--" ]]; then
+                    err_exit "Invalid value passed to --fontlist"
+                fi
+                local ofs=$IFS
+                IFS='+'
+                FONTS=( ${ARGV[$j]} )
+                IFS=$ofs
+                i=$j ;;
             --fonts_dir)
                 parse_value "FONTS_DIR" ${ARGV[$j]}
                 i=$j ;;
@@ -145,6 +156,9 @@ parse_flags() {
     if [[ -z ${LANG_CODE} ]]; then
         err_exit "Need to specify a language --lang"
     fi
+    if [[ -z ${BINDIR} ]]; then
+        err_exit "Need to specify path to built binaries --bin_dir"
+    fi
     if [[ -z ${LANGDATA_ROOT} ]]; then
         err_exit "Need to specify path to language files --langdata_dir"
     fi
@@ -156,6 +170,8 @@ parse_flags() {
             TESSDATA_DIR="${TESSDATA_PREFIX}"
         fi
     fi
+
+    set_prog_paths
 
     # Location where intermediate files will be created.
     TRAINING_DIR=${WORKSPACE_DIR}/${LANG_CODE}
@@ -184,8 +200,8 @@ initialize_fontconfig() {
     export FONT_CONFIG_CACHE=$(mktemp -d --tmpdir font_tmp.XXXXXXXXXX)
     local sample_path=${FONT_CONFIG_CACHE}/sample_text.txt
     echo "Text" >${sample_path}
-    run_command text2image --fonts_dir=${FONTS_DIR} \
-        --font="${FONTS[0]}" --outputbase=${sample_path} --text=${sample_path} \
+    run_command ${TEXT2IMAGE_EXE} --fonts_dir=${FONTS_DIR} \
+        --font="Arial" --outputbase=${sample_path} --text=${sample_path} \
         --fontconfig_tmpdir=${FONT_CONFIG_CACHE}
 }
 
@@ -212,14 +228,14 @@ generate_font_image() {
       fi
     done
 
-    run_command text2image ${common_args} --font="${font}" \
+    run_command ${TEXT2IMAGE_EXE} ${common_args} --font="${font}" \
         --text=${TRAINING_TEXT} ${TEXT2IMAGE_EXTRA_ARGS}
     check_file_readable ${outbase}.box ${outbase}.tif
 
     if (( ${EXTRACT_FONT_PROPERTIES} )) &&
         [[ -r ${TRAIN_NGRAMS_FILE} ]]; then
         tlog "Extracting font properties of ${font}"
-        run_command text2image ${common_args} --font="${font}" \
+        run_command ${TEXT2IMAGE_EXE} ${common_args} --font="${font}" \
             --ligatures=false --text=${TRAIN_NGRAMS_FILE} \
             --only_extract_font_properties --ptsize=32
         check_file_readable ${outbase}.fontinfo
@@ -238,36 +254,35 @@ phase_I_generate_image() {
         err_exit "Could not find training text file ${TRAINING_TEXT}"
     fi
     CHAR_SPACING="0.0"
+    EXPOSURE="0"
 
-    for EXPOSURE in $EXPOSURES; do
-        if (( ${EXTRACT_FONT_PROPERTIES} )) && [[ -r ${BIGRAM_FREQS_FILE} ]]; then
-            # Parse .bigram_freqs file and compose a .train_ngrams file with text
-            # for tesseract to recognize during training. Take only the ngrams whose
-            # combined weight accounts for 95% of all the bigrams in the language.
-            NGRAM_FRAC=$(cat ${BIGRAM_FREQS_FILE} \
-                | awk '{s=s+$2}; END {print (s/100)*p}' p=99)
-            cat ${BIGRAM_FREQS_FILE} | sort -rnk2 \
-                | awk '{s=s+$2; if (s <= x) {printf "%s ", $1; } }' \
-                x=${NGRAM_FRAC} > ${TRAIN_NGRAMS_FILE}
-            check_file_readable ${TRAIN_NGRAMS_FILE}
+    if (( ${EXTRACT_FONT_PROPERTIES} )) && [[ -r ${BIGRAM_FREQS_FILE} ]]; then
+        # Parse .bigram_freqs file and compose a .train_ngrams file with text
+        # for tesseract to recognize during training. Take only the ngrams whose
+        # combined weight accounts for 95% of all the bigrams in the language.
+        NGRAM_FRAC=$(cat ${BIGRAM_FREQS_FILE} \
+            | awk '{s=s+$2}; END {print (s/100)*p}' p=99)
+        cat ${BIGRAM_FREQS_FILE} | sort -rnk2 \
+            | awk '{s=s+$2; if (s <= x) {printf "%s ", $1; } }' \
+            x=${NGRAM_FRAC} > ${TRAIN_NGRAMS_FILE}
+        check_file_readable ${TRAIN_NGRAMS_FILE}
+    fi
+
+    local counter=0
+    for font in "${FONTS[@]}"; do
+        generate_font_image "${font}" &
+        let counter=counter+1
+        let rem=counter%par_factor
+        if [[ "${rem}" -eq 0 ]]; then
+          wait
         fi
-
-        local counter=0
-        for font in "${FONTS[@]}"; do
-            generate_font_image "${font}" &
-            let counter=counter+1
-            let rem=counter%par_factor
-            if [[ "${rem}" -eq 0 ]]; then
-              wait
-            fi
-        done
-        wait
-        # Check that each process was successful.
-        for font in "${FONTS[@]}"; do
-            local fontname=$(echo ${font} | tr ' ' '_' | sed 's/,//g')
-            local outbase=${TRAINING_DIR}/${LANG_CODE}.${fontname}.exp${EXPOSURE}
-            check_file_readable ${outbase}.box ${outbase}.tif
-        done
+    done
+    wait
+    # Check that each process was successful.
+    for font in "${FONTS[@]}"; do
+        local fontname=$(echo ${font} | tr ' ' '_' | sed 's/,//g')
+        local outbase=${TRAINING_DIR}/${LANG_CODE}.${fontname}.exp${EXPOSURE}
+        check_file_readable ${outbase}.box ${outbase}.tif
     done
 }
 
@@ -276,7 +291,7 @@ phase_UP_generate_unicharset() {
     tlog "\n=== Phase UP: Generating unicharset and unichar properties files ==="
 
     local box_files=$(ls ${TRAINING_DIR}/*.box)
-    run_command unicharset_extractor -D "${TRAINING_DIR}/" ${box_files}
+    run_command ${UNICHARSET_EXTRACTOR_EXE} -D "${TRAINING_DIR}/" ${box_files}
     local outfile=${TRAINING_DIR}/unicharset
     UNICHARSET_FILE="${TRAINING_DIR}/${LANG_CODE}.unicharset"
     check_file_readable ${outfile}
@@ -284,7 +299,7 @@ phase_UP_generate_unicharset() {
 
     XHEIGHTS_FILE="${TRAINING_DIR}/${LANG_CODE}.xheights"
     check_file_readable ${UNICHARSET_FILE}
-    run_command set_unicharset_properties \
+    run_command ${SET_UNICHARSET_PROPERTIES_EXE} \
         -U ${UNICHARSET_FILE} -O ${UNICHARSET_FILE} -X ${XHEIGHTS_FILE} \
         --script_dir=${LANGDATA_ROOT}
     check_file_readable ${XHEIGHTS_FILE}
@@ -312,7 +327,7 @@ phase_D_generate_dawg() {
     if [[ -s ${WORDLIST_FILE} ]]; then
         tlog "Generating word Dawg"
         check_file_readable ${UNICHARSET_FILE}
-        run_command wordlist2dawg -r 1 ${WORDLIST_FILE} ${WORD_DAWG} \
+        run_command ${WORDLIST2DAWG_EXE} -r 1 ${WORDLIST_FILE} ${WORD_DAWG} \
             ${UNICHARSET_FILE}
         check_file_readable ${WORD_DAWG}
 
@@ -324,13 +339,13 @@ phase_D_generate_dawg() {
     if [[ -s ${freq_wordlist_file} ]]; then
         check_file_readable ${UNICHARSET_FILE}
         tlog "Generating frequent-word Dawg"
-        run_command wordlist2dawg  -r 1 ${freq_wordlist_file} \
+        run_command ${WORDLIST2DAWG_EXE}  -r 1 ${freq_wordlist_file} \
             ${FREQ_DAWG} ${UNICHARSET_FILE}
         check_file_readable ${FREQ_DAWG}
     fi
 
     # Punctuation DAWG
-    # -r arguments to wordlist2dawg denote RTL reverse policy
+    # -r arguments to WORDLIST2DAWG_EXE denote RTL reverse policy
     # (see Trie::RTLReversePolicy enum in third_party/tesseract/dict/trie.h).
     # We specify 0/RRP_DO_NO_REVERSE when generating number DAWG,
     # 1/RRP_REVERSE_IF_HAS_RTL for freq and word DAWGS,
@@ -345,20 +360,20 @@ phase_D_generate_dawg() {
         PUNC_FILE="${LANGDATA_ROOT}/common.punc"
     fi
     check_file_readable ${PUNC_FILE}
-    run_command wordlist2dawg -r ${punc_reverse_policy} \
+    run_command ${WORDLIST2DAWG_EXE} -r ${punc_reverse_policy} \
         ${PUNC_FILE} ${PUNC_DAWG} ${UNICHARSET_FILE}
     check_file_readable ${PUNC_DAWG}
 
     # Numbers DAWG
     if [[ -s ${NUMBERS_FILE} ]]; then
-        run_command wordlist2dawg -r 0 \
+        run_command ${WORDLIST2DAWG_EXE} -r 0 \
             ${NUMBERS_FILE} ${NUMBER_DAWG} ${UNICHARSET_FILE}
         check_file_readable ${NUMBER_DAWG}
     fi
 
     # Bigram dawg
     if [[ -s ${WORD_BIGRAMS_FILE} ]]; then
-        run_command wordlist2dawg -r 1 \
+        run_command ${WORDLIST2DAWG_EXE} -r 1 \
             ${WORD_BIGRAMS_FILE} ${BIGRAM_DAWG} ${UNICHARSET_FILE}
         check_file_readable ${BIGRAM_DAWG}
     fi
@@ -372,9 +387,10 @@ phase_E_extract_features() {
         par_factor=1
     fi
     tlog "\n=== Phase E: Extracting features ==="
+    TRAIN_EXPOSURES='0'
 
     local img_files=""
-    for exposure in ${EXPOSURES}; do
+    for exposure in ${TRAIN_EXPOSURES}; do
         img_files=${img_files}' '$(ls ${TRAINING_DIR}/*.exp${exposure}.tif)
     done
 
@@ -389,7 +405,7 @@ phase_E_extract_features() {
     tlog "Using TESSDATA_PREFIX=${TESSDATA_PREFIX}"
     local counter=0
     for img_file in ${img_files}; do
-        run_command tesseract ${img_file} ${img_file%.*} \
+        run_command ${TESSERACT_EXE} ${img_file} ${img_file%.*} \
             ${box_config} ${config} &
       let counter=counter+1
       let rem=counter%par_factor
@@ -411,7 +427,7 @@ phase_C_cluster_prototypes() {
     tlog "\n=== Phase C: Clustering feature prototypes (cnTraining) ==="
     local out_normproto=$1
 
-    run_command cntraining -D "${TRAINING_DIR}/" \
+    run_command ${CN_TRAINING_EXE} -D "${TRAINING_DIR}/" \
         $(ls ${TRAINING_DIR}/*.tr)
 
     check_file_readable ${TRAINING_DIR}/normproto
@@ -431,7 +447,7 @@ phase_S_cluster_shapes() {
         font_props=${font_props}" -X ${TRAINING_DIR}/${LANG_CODE}.xheights"
     fi
 
-    run_command shapeclustering \
+    run_command ${SHAPE_TRAINING_EXE} \
         -D "${TRAINING_DIR}/" \
         -U ${TRAINING_DIR}/${LANG_CODE}.unicharset \
         -O ${TRAINING_DIR}/${LANG_CODE}.mfunicharset \
@@ -452,7 +468,7 @@ phase_M_cluster_microfeatures() {
         font_props=${font_props}" -X ${TRAINING_DIR}/${LANG_CODE}.xheights"
     fi
 
-    run_command mftraining \
+    run_command ${MF_TRAINING_EXE} \
         -D "${TRAINING_DIR}/" \
         -U ${TRAINING_DIR}/${LANG_CODE}.unicharset \
         -O ${TRAINING_DIR}/${LANG_CODE}.mfunicharset \
@@ -512,7 +528,7 @@ make__traineddata() {
   fi
 
   # Compose the traineddata file.
-  run_command combine_tessdata ${TRAINING_DIR}/${LANG_CODE}.
+  run_command ${COMBINE_TESSDATA_EXE} ${TRAINING_DIR}/${LANG_CODE}.
 
   # Copy it to the output dir, overwriting only if allowed by the cmdline flag.
   if [[ ! -d ${OUTPUT_DIR} ]]; then

@@ -42,9 +42,8 @@ public class TessPdfRendererTest extends TestCase {
     public void testCreate() {
         // Attempt to initialize the API.
         final TessBaseAPI baseApi = new TessBaseAPI();
-        boolean success = baseApi.init(TessBaseAPITest.TESSBASE_PATH,
+        baseApi.init(TessBaseAPITest.TESSBASE_PATH, 
                 TessBaseAPITest.DEFAULT_LANGUAGE);
-        assertTrue(success);
 
         String pdfBasename = "testCreate";
         
@@ -60,9 +59,8 @@ public class TessPdfRendererTest extends TestCase {
     public void testAddPageToDocument() throws IOException {
         // Attempt to initialize the API.
         final TessBaseAPI baseApi = new TessBaseAPI();
-        boolean success = baseApi.init(TessBaseAPITest.TESSBASE_PATH,
+        baseApi.init(TessBaseAPITest.TESSBASE_PATH, 
                 TessBaseAPITest.DEFAULT_LANGUAGE);
-        assertTrue(success);
 
         String pdfBasename = "testAddPageToDocument";
 

@@ -32,4 +32,3 @@ build/
 .gradle/
 .idea/
 *.iml
-javadoc/

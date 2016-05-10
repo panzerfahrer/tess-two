@@ -50,7 +50,7 @@ class StringRenderer {
   StringRenderer(const string& font_desc, int page_width, int page_height);
   ~StringRenderer();
 
-  // Renders the text with the chosen font and returns the byte offset up to
+  // Renders the text with the chosen font and returns the byte offset upto
   // which the text could be rendered so as to fit the specified page
   // dimensions.
   int RenderToImage(const char* text, int text_length, Pix** pix);

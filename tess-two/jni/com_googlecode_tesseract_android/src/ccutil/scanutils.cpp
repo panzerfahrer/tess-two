@@ -19,10 +19,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef HAVE_CONFIG_H
-#include "config_auto.h"
-#endif
-
 #include <ctype.h>
 #include <math.h>
 #include <stdarg.h>
@@ -38,7 +34,7 @@
 #include "tprintf.h"
 
 // workaround for "'off_t' was not declared in this scope" with -std=c++11
-#if !defined(HAVE_OFF_T)
+#if !defined(off_t) && !defined(__APPLE__) && !defined(__CYGWIN__)
 typedef long off_t;
 #endif  // off_t
 

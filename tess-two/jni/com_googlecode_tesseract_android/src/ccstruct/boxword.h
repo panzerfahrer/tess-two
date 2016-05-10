@@ -82,7 +82,7 @@ class BoxWord {
   const TBOX& bounding_box() const {
     return bbox_;
   }
-  int length() const {
+  const int length() const {
     return length_;
   }
   const TBOX& BlobBox(int index) const {

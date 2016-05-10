@@ -69,11 +69,11 @@ class DLLSYM ELIST2_LINK
     }
 
     ELIST2_LINK(                        //copy constructor
-                const ELIST2_LINK &) {  //don't copy link
+                const ELIST2_LINK &) {  //dont copy link
       prev = next = NULL;
     }
 
-    void operator= (             //don't copy links
+    void operator= (             //dont copy links
     const ELIST2_LINK &) {
       prev = next = NULL;
     }
@@ -133,7 +133,7 @@ class DLLSYM ELIST2
 
     // Assuming list has been sorted already, insert new_link to
     // keep the list sorted according to the same comparison function.
-    // Comparison function is the same as used by sort, i.e. uses double
+    // Comparision function is the same as used by sort, i.e. uses double
     // indirection. Time is O(1) to add to beginning or end.
     // Time is linear to add pre-sorted items to an empty list.
     void add_sorted(int comparator(const void*, const void*),
@@ -241,7 +241,7 @@ class DLLSYM ELIST2_ITERATOR
     BOOL8 cycled_list();  //Completed a cycle?
 
     void add_to_end(                         //add at end &
-                    ELIST2_LINK *new_link);  //don't move
+                    ELIST2_LINK *new_link);  //dont move
 
     void exchange(                             //positions of 2 links
                   ELIST2_ITERATOR *other_it);  //other iterator
@@ -264,6 +264,8 @@ class DLLSYM ELIST2_ITERATOR
 inline void ELIST2_ITERATOR::set_to_list(  //change list
                                          ELIST2 *list_to_iterate) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::set_to_list", ABORT, NULL);
   if (!list_to_iterate)
     BAD_PARAMETER.error ("ELIST2_ITERATOR::set_to_list", ABORT,
       "list_to_iterate is NULL");
@@ -301,6 +303,8 @@ inline ELIST2_ITERATOR::ELIST2_ITERATOR(ELIST2 *list_to_iterate) {
 inline void ELIST2_ITERATOR::add_after_then_move(  // element to add
                                                  ELIST2_LINK *new_element) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_after_then_move", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_after_then_move", ABORT, NULL);
   if (!new_element)
@@ -350,6 +354,8 @@ inline void ELIST2_ITERATOR::add_after_then_move(  // element to add
 inline void ELIST2_ITERATOR::add_after_stay_put(  // element to add
                                                 ELIST2_LINK *new_element) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_after_stay_put", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_after_stay_put", ABORT, NULL);
   if (!new_element)
@@ -402,6 +408,8 @@ inline void ELIST2_ITERATOR::add_after_stay_put(  // element to add
 inline void ELIST2_ITERATOR::add_before_then_move(  // element to add
                                                   ELIST2_LINK *new_element) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_before_then_move", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_before_then_move", ABORT, NULL);
   if (!new_element)
@@ -442,13 +450,15 @@ inline void ELIST2_ITERATOR::add_before_then_move(  // element to add
 /***********************************************************************
  *							ELIST2_ITERATOR::add_before_stay_put
  *
- *  Add a new element to the list before the current element but don't move the
+ *  Add a new element to the list before the current element but dont move the
  *  iterator to the new element.
  **********************************************************************/
 
 inline void ELIST2_ITERATOR::add_before_stay_put(  // element to add
                                                  ELIST2_LINK *new_element) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_before_stay_put", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_before_stay_put", ABORT, NULL);
   if (!new_element)
@@ -490,12 +500,14 @@ inline void ELIST2_ITERATOR::add_before_stay_put(  // element to add
 /***********************************************************************
  *							ELIST2_ITERATOR::add_list_after
  *
- *  Insert another list to this list after the current element but don't move the
+ *  Insert another list to this list after the current element but dont move the
  *  iterator.
  **********************************************************************/
 
 inline void ELIST2_ITERATOR::add_list_after(ELIST2 *list_to_add) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_list_after", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_list_after", ABORT, NULL);
   if (!list_to_add)
@@ -548,6 +560,8 @@ inline void ELIST2_ITERATOR::add_list_after(ELIST2 *list_to_add) {
 
 inline void ELIST2_ITERATOR::add_list_before(ELIST2 *list_to_add) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_list_before", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_list_before", ABORT, NULL);
   if (!list_to_add)
@@ -600,6 +614,8 @@ inline ELIST2_LINK *ELIST2_ITERATOR::extract() {
   ELIST2_LINK *extracted_link;
 
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::extract", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::extract", ABORT, NULL);
   if (!current)                  //list empty or
@@ -641,6 +657,8 @@ inline ELIST2_LINK *ELIST2_ITERATOR::extract() {
 
 inline ELIST2_LINK *ELIST2_ITERATOR::move_to_first() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::move_to_first", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::move_to_first", ABORT, NULL);
   #endif
@@ -661,6 +679,8 @@ inline ELIST2_LINK *ELIST2_ITERATOR::move_to_first() {
 
 inline ELIST2_LINK *ELIST2_ITERATOR::move_to_last() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::move_to_last", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::move_to_last", ABORT, NULL);
   #endif
@@ -685,6 +705,8 @@ inline ELIST2_LINK *ELIST2_ITERATOR::move_to_last() {
 
 inline void ELIST2_ITERATOR::mark_cycle_pt() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::mark_cycle_pt", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::mark_cycle_pt", ABORT, NULL);
   #endif
@@ -706,6 +728,8 @@ inline void ELIST2_ITERATOR::mark_cycle_pt() {
 
 inline BOOL8 ELIST2_ITERATOR::at_first() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::at_first", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::at_first", ABORT, NULL);
   #endif
@@ -726,6 +750,8 @@ inline BOOL8 ELIST2_ITERATOR::at_first() {
 
 inline BOOL8 ELIST2_ITERATOR::at_last() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::at_last", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::at_last", ABORT, NULL);
   #endif
@@ -746,6 +772,8 @@ inline BOOL8 ELIST2_ITERATOR::at_last() {
 
 inline BOOL8 ELIST2_ITERATOR::cycled_list() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::cycled_list", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::cycled_list", ABORT, NULL);
   #endif
@@ -764,6 +792,8 @@ inline BOOL8 ELIST2_ITERATOR::cycled_list() {
 
 inline inT32 ELIST2_ITERATOR::length() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::length", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::length", ABORT, NULL);
   #endif
@@ -784,6 +814,8 @@ ELIST2_ITERATOR::sort (          //sort elements
 int comparator (                 //comparison routine
 const void *, const void *)) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::sort", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::sort", ABORT, NULL);
   #endif
@@ -806,6 +838,8 @@ const void *, const void *)) {
 inline void ELIST2_ITERATOR::add_to_end(  // element to add
                                         ELIST2_LINK *new_element) {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::add_to_end", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::add_to_end", ABORT, NULL);
   if (!new_element)
@@ -849,7 +883,7 @@ Replace <parm> with "<parm>".  <parm> may be an arbitrary number of tokens
 CLASSNAME is assumed to be the name of a class which has a baseclass of
 ELIST2_LINK.
 
-NOTE:  Because we don't use virtual functions in the list code, the list code
+NOTE:  Because we dont use virtual functions in the list code, the list code
 will NOT work correctly for classes derived from this.
 
 The macro generates:
@@ -893,7 +927,7 @@ public:																								\
 							CLASSNAME##_LIST():ELIST2() {} \
 														/* constructor */		\
 																										\
-							CLASSNAME##_LIST(			/* don't construct */ \
+							CLASSNAME##_LIST(			/* dont construct */ \
 	const CLASSNAME##_LIST&)							/*by initial assign*/\
 	{ DONT_CONSTRUCT_LIST_BY_COPY.error( QUOTE_IT( CLASSNAME##_LIST ),      \
 														ABORT, NULL ); }							\
@@ -981,7 +1015,7 @@ ELIST2IZEH_C( CLASSNAME )
 *  A function which can delete a CLASSNAME element.  This is passed to the		\
 *  generic clear list member function so that when a list is cleared the		\
 *  elements on the list are properly destroyed from the base class, even		\
-*  though we don't use a virtual destructor function.									\
+*  though we dont use a virtual destructor function.									\
 **********************************************************************/			\
 																										\
 DLLSYM void					CLASSNAME##_zapper(			/*delete a link*/		\

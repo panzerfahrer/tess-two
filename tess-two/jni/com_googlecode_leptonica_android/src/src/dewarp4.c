@@ -225,10 +225,10 @@ L_DEWARP    *dew;
         return ERROR_INT("dewa not defined", procName, 1);
 
         /* Generate the page model */
-    lept_mkdir("lept/dewarp");
+    lept_mkdir("lept");
     dew = dewarpCreate(pixb, 0);
     dewarpaInsertDewarp(dewa, dew);
-    debugfile = (debug) ? "/tmp/lept/dewarp/singlepage_model.pdf" : NULL;
+    debugfile = (debug) ? "/tmp/lept/singlepage_model.pdf" : NULL;
     dewarpBuildPageModel(dew, debugfile);
     dewarpaModelStatus(dewa, 0, &vsuccess, NULL);
     if (vsuccess == 0) {
@@ -238,7 +238,7 @@ L_DEWARP    *dew;
     }
 
         /* Apply the page model */
-    debugfile = (debug) ? "/tmp/lept/dewarp/singlepage_apply.pdf" : NULL;
+    debugfile = (debug) ? "/tmp/lept/singlepage_apply.pdf" : NULL;
     ret = dewarpaApplyDisparity(dewa, 0, pixs, 255, 0, 0, ppixd, debugfile);
     if (ret)
         L_ERROR("invalid model; failure to apply disparity\n", procName);
@@ -866,6 +866,7 @@ l_int32  maxcurv, diffcurv, diffedge;
  *              scalefact (on contour images; typ. 0.5)
  *              first (first page model to render)
  *              last (last page model to render; use 0 to go to end)
+ *              fontdir (for text bitmap fonts)
  *      Return: 0 if OK, 1 on error
  *
  *  Notes:
@@ -876,7 +877,8 @@ l_int32
 dewarpaShowArrays(L_DEWARPA   *dewa,
                   l_float32    scalefact,
                   l_int32      first,
-                  l_int32      last)
+                  l_int32      last,
+                  const char  *fontdir)
 {
 char       buf[256];
 char      *pathname;
@@ -896,10 +898,10 @@ PIXA      *pixa;
     if (last < first)
         return ERROR_INT("last < first", procName, 1);
 
-    lept_rmdir("lept/dewarp1");  /* temp directory for contour plots */
-    lept_mkdir("lept/dewarp1");
-    if ((bmf = bmfCreate(NULL, 8)) == NULL)
-        L_ERROR("bmf not made; page info not displayed", procName);
+    lept_rmdir("lept");
+    lept_mkdir("lept");
+    if ((bmf = bmfCreate(fontdir, 8)) == NULL)
+              L_ERROR("bmf not made; page info not displayed", procName);
 
     fprintf(stderr, "Generating contour plots\n");
     for (i = first; i <= last; i++) {
@@ -938,18 +940,18 @@ PIXA      *pixa;
         pixd = pixAddSingleTextblock(pixt, bmf, buf, 0x0000ff00,
                                      L_ADD_BELOW, NULL);
         snprintf(buf, sizeof(buf), "arrays_%04d.png", i);
-        pathname = genPathname("/tmp/lept/dewarp1", buf);
+        pathname = genPathname("/tmp/lept", buf);
         pixWrite(pathname, pixd, IFF_PNG);
         pixaDestroy(&pixa);
         pixDestroy(&pixt);
         pixDestroy(&pixd);
-        LEPT_FREE(pathname);
+        FREE(pathname);
     }
     bmfDestroy(&bmf);
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Generating pdf of contour plots\n");
-    convertFilesToPdf("/tmp/lept/dewarp1", "arrays_", 90, 1.0, L_FLATE_ENCODE,
+    convertFilesToPdf("/tmp/lept", "arrays_", 90, 1.0, L_FLATE_ENCODE,
                       0, "Disparity arrays", "/tmp/lept/disparity_arrays.pdf");
     fprintf(stderr, "Output written to: /tmp/lept/disparity_arrays.pdf\n");
     return 0;
@@ -960,22 +962,22 @@ PIXA      *pixa;
  *  dewarpDebug()
  *
  *      Input:  dew
- *              subdirs (one or more subdirectories of /tmp; e.g., "dew1")
+ *              subdir (a subdirectory of /tmp; e.g., "dew1")
  *              index (to help label output images; e.g., the page number)
  *      Return: 0 if OK, 1 on error
  *
  *  Notes:
  *      (1) Prints dewarp fields and generates disparity array contour images.
  *          The contour images are written to file:
- *                /tmp/[subdirs]/pixv_[index].png
+ *                /tmp/[subdir]/pixv_[index].png
  */
 l_int32
 dewarpDebug(L_DEWARP    *dew,
-            const char  *subdirs,
+            const char  *subdir,
             l_int32      index)
 {
-char     fname[64];
-char    *outdir, *pathname;
+char     outdir[256], fname[64];
+char    *pathname;
 l_int32  svd, shd;
 PIX     *pixv, *pixh;
 
@@ -983,8 +985,8 @@ PIX     *pixv, *pixh;
 
     if (!dew)
         return ERROR_INT("dew not defined", procName, 1);
-    if (!subdirs)
-        return ERROR_INT("subdirs not defined", procName, 1);
+    if (!subdir)
+        return ERROR_INT("subdir not defined", procName, 1);
 
     fprintf(stderr, "pageno = %d, hasref = %d, refpage = %d\n",
             dew->pageno, dew->hasref, dew->refpage);
@@ -1016,15 +1018,15 @@ PIX     *pixv, *pixh;
     }
 
     dewarpPopulateFullRes(dew, NULL, 0, 0);
-    lept_mkdir(subdirs);
-    outdir = pathJoin("/tmp", subdirs);
+    lept_mkdir(subdir);
+    snprintf(outdir, sizeof(outdir), "/tmp/%s", subdir);
     if (svd) {
         pixv = fpixRenderContours(dew->fullvdispar, 3.0, 0.15);
         snprintf(fname, sizeof(fname), "pixv_%d.png", index);
         pathname = genPathname(outdir, fname);
         pixWrite(pathname, pixv, IFF_PNG);
         pixDestroy(&pixv);
-        LEPT_FREE(pathname);
+        FREE(pathname);
     }
     if (shd) {
         pixh = fpixRenderContours(dew->fullhdispar, 3.0, 0.15);
@@ -1032,9 +1034,8 @@ PIX     *pixv, *pixh;
         pathname = genPathname(outdir, fname);
         pixWrite(pathname, pixh, IFF_PNG);
         pixDestroy(&pixh);
-        LEPT_FREE(pathname);
+        FREE(pathname);
     }
-    LEPT_FREE(outdir);
     return 0;
 }
 
@@ -1046,6 +1047,7 @@ PIX     *pixv, *pixh;
  *              sarray (of indexed input images)
  *              boxa (crop boxes for input images; can be null)
  *              firstpage, lastpage
+ *              fontdir (for text bitmap fonts)
  *              pdfout (filename)
  *      Return: 0 if OK, 1 on error
  *
@@ -1063,6 +1065,7 @@ dewarpShowResults(L_DEWARPA   *dewa,
                   BOXA        *boxa,
                   l_int32      firstpage,
                   l_int32      lastpage,
+                  const char  *fontdir,
                   const char  *pdfout)
 {
 char       bufstr[256];
@@ -1085,9 +1088,10 @@ PIXA      *pixa;
     if (firstpage > lastpage)
         return ERROR_INT("invalid first/last page numbers", procName, 1);
 
-    lept_rmdir("lept/dewarp_pdfout");
-    lept_mkdir("lept/dewarp_pdfout");
-    bmf = bmfCreate(NULL, 6);
+    lept_rmdir("dewarp_pdfout");
+    lept_mkdir("dewarp_pdfout");
+    if ((bmf = bmfCreate(fontdir, 6)) == NULL)
+        L_ERROR("bmf not made; page info not displayed", procName);
 
     fprintf(stderr, "Dewarping and generating s/by/s view\n");
     for (i = firstpage; i <= lastpage; i++) {
@@ -1121,7 +1125,7 @@ PIXA      *pixa;
             snprintf(bufstr, sizeof(bufstr), "Page %d; no dewarp\n", i);
         pixt2 = pixAddSingleTextblock(pixt1, bmf, bufstr, 0x0000ff00,
                                       L_ADD_BELOW, 0);
-        snprintf(bufstr, sizeof(bufstr), "/tmp/lept/dewarp_pdfout/%05d", i);
+        snprintf(bufstr, sizeof(bufstr), "/tmp/dewarp_pdfout/%05d", i);
         pixWrite(bufstr, pixt2, IFF_JFIF_JPEG);
         pixaDestroy(&pixa);
         pixDestroy(&pixs);
@@ -1131,11 +1135,11 @@ PIXA      *pixa;
     fprintf(stderr, "\n");
 
     fprintf(stderr, "Generating pdf of result\n");
-    convertFilesToPdf("/tmp/lept/dewarp_pdfout", NULL, 100, 1.0, L_JPEG_ENCODE,
+    convertFilesToPdf("/tmp/dewarp_pdfout", NULL, 100, 1.0, L_JPEG_ENCODE,
                       0, "Dewarp sequence", pdfout);
     outpath = genPathname(pdfout, NULL);
     fprintf(stderr, "Output written to: %s\n", outpath);
-    LEPT_FREE(outpath);
+    FREE(outpath);
     bmfDestroy(&bmf);
     return 0;
 }

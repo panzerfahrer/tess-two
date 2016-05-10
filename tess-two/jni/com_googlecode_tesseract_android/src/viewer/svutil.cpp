@@ -38,7 +38,6 @@ struct addrinfo {
 #include <stdlib.h>
 #include <string.h>
 #include <netdb.h>
-#include <sys/select.h>
 #include <sys/socket.h>
 #ifdef __linux__
 #include <sys/prctl.h>
@@ -60,6 +59,7 @@ struct addrinfo {
 
 #include "svutil.h"
 
+const int kBufferSize = 65536;
 const int kMaxMsgSize = 4096;
 
 // Signals a thread to exit.
@@ -127,7 +127,7 @@ SVSemaphore::SVSemaphore() {
   semaphore_ = CreateSemaphore(0, 0, 10, 0);
 #elif defined(__APPLE__)
   char name[50];
-  snprintf(name, sizeof(name), "%ld", random());
+  snprintf(name, sizeof(name), "%d", random());
   sem_unlink(name);
   semaphore_ = sem_open(name, O_CREAT , S_IWUSR, 0);
   if (semaphore_ == SEM_FAILED) {
@@ -296,11 +296,14 @@ static std::string ScrollViewCommand(std::string scrollview_path) {
   // this unnecessary.
   // Also the path has to be separated by ; on windows and : otherwise.
 #ifdef _WIN32
-  const char* cmd_template = "-Djava.library.path=%s -jar %s/ScrollView.jar";
-
+  const char* cmd_template = "-Djava.library.path=%s -cp %s/ScrollView.jar;"
+      "%s/piccolo2d-core-3.0.jar:%s/piccolo2d-extras-3.0.jar"
+      " com.google.scrollview.ScrollView";
 #else
   const char* cmd_template = "-c \"trap 'kill %%1' 0 1 2 ; java "
-      "-Xms1024m -Xmx2048m -jar %s/ScrollView.jar"
+      "-Xms1024m -Xmx2048m -Djava.library.path=%s -cp %s/ScrollView.jar:"
+      "%s/piccolo2d-core-3.0.jar:%s/piccolo2d-extras-3.0.jar"
+      " com.google.scrollview.ScrollView"
       " & wait\"";
 #endif
   int cmdlen = strlen(cmd_template) + 4*strlen(scrollview_path.c_str()) + 1;

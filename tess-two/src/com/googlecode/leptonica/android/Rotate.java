@@ -21,6 +21,7 @@ package com.googlecode.leptonica.android;
  */
 public class Rotate {
     static {
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 

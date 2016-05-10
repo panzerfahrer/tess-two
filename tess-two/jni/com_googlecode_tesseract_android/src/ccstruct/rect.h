@@ -307,7 +307,7 @@ class DLLSYM TBOX  {  // bounding box
  *
  **********************************************************************/
 
-inline TBOX::TBOX(               // constructor
+inline TBOX::TBOX(               // construtor
                 const FCOORD pt  // floating centre
                ) {
   bot_left = ICOORD ((inT16) floor (pt.x ()), (inT16) floor (pt.y ()));

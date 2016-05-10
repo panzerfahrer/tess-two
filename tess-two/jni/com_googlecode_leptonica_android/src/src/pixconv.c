@@ -112,10 +112,6 @@
  *           PIX        *pixConvert24To32()
  *           PIX        *pixConvert32To24()
  *
- *      Conversion between 32 bpp (1 spp) and 16 or 8 bpp
- *           PIX        *pixConvert32To16()
- *           PIX        *pixConvert32To8()
- *
  *      Removal of alpha component by blending with white background
  *           PIX        *pixRemoveAlpha()
  *
@@ -218,7 +214,6 @@ PIXCMAP   *cmap;
 
     if (!pixd)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
-    pixCopyInputFormat(pixd, pixs);
     return pixd;
 }
 
@@ -366,11 +361,9 @@ PIX       *pixd;
         if ((pixd = pixCreate(w, h, 8)) == NULL)
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
         pixCopyResolution(pixd, pixs);
-        pixCopyInputFormat(pixd, pixs);
         datad = pixGetData(pixd);
         wpld = pixGetWpl(pixd);
-        if ((graymap = (l_int32 *)LEPT_CALLOC(ncolors, sizeof(l_int32)))
-            == NULL)
+        if ((graymap = (l_int32 *)CALLOC(ncolors, sizeof(l_int32))) == NULL)
             return (PIX *)ERROR_PTR("calloc fail for graymap", procName, NULL);
         for (i = 0; i < pixcmapGetCount(cmap); i++) {
             graymap[i] = (rmap[i] + 2 * gmap[i] + bmap[i]) / 4;
@@ -514,17 +507,16 @@ PIX       *pixd;
             }
         }
         if (graymap)
-            LEPT_FREE(graymap);
+            FREE(graymap);
     } else {  /* type == REMOVE_CMAP_TO_FULL_COLOR or REMOVE_CMAP_WITH_ALPHA */
         if ((pixd = pixCreate(w, h, 32)) == NULL)
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
-        pixCopyInputFormat(pixd, pixs);
         pixCopyResolution(pixd, pixs);
         if (type == REMOVE_CMAP_WITH_ALPHA)
             pixSetSpp(pixd, 4);
         datad = pixGetData(pixd);
         wpld = pixGetWpl(pixd);
-        if ((lut = (l_uint32 *)LEPT_CALLOC(ncolors, sizeof(l_uint32))) == NULL)
+        if ((lut = (l_uint32 *)CALLOC(ncolors, sizeof(l_uint32))) == NULL)
             return (PIX *)ERROR_PTR("calloc fail for lut", procName, NULL);
         for (i = 0; i < ncolors; i++) {
             if (type == REMOVE_CMAP_TO_FULL_COLOR)
@@ -553,13 +545,13 @@ PIX       *pixd;
                     lined[j] = lut[sval];
             }
         }
-        LEPT_FREE(lut);
+        FREE(lut);
     }
 
-    LEPT_FREE(rmap);
-    LEPT_FREE(gmap);
-    LEPT_FREE(bmap);
-    LEPT_FREE(amap);
+    FREE(rmap);
+    FREE(gmap);
+    FREE(bmap);
+    FREE(amap);
     return pixd;
 }
 
@@ -640,7 +632,7 @@ PIXCMAP   *cmap;
     pixGetDimensions(pixt, &w, &h, NULL);
     datat = pixGetData(pixt);
     wplt = pixGetWpl(pixt);
-    inta = (l_int32 *)LEPT_CALLOC(256, sizeof(l_int32));
+    inta = (l_int32 *)CALLOC(256, sizeof(l_int32));
     for (i = 0; i < h; i++) {
         linet = datat + i * wplt;
         for (j = 0; j < w; j++) {
@@ -649,7 +641,7 @@ PIXCMAP   *cmap;
         }
     }
     cmap = pixcmapCreate(8);
-    revmap = (l_int32 *)LEPT_CALLOC(256, sizeof(l_int32));
+    revmap = (l_int32 *)CALLOC(256, sizeof(l_int32));
     for (i = 0, index = 0; i < 256; i++) {
         if (inta[i]) {
             pixcmapAddColor(cmap, i, i, i);
@@ -660,7 +652,6 @@ PIXCMAP   *cmap;
         /* Set all pixels in pixd to the colormap index */
     pixd = pixCreateTemplate(pixt);
     pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
     pixCopyResolution(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
@@ -674,8 +665,8 @@ PIXCMAP   *cmap;
     }
 
     pixDestroy(&pixt);
-    LEPT_FREE(inta);
-    LEPT_FREE(revmap);
+    FREE(inta);
+    FREE(revmap);
     return pixd;
 }
 
@@ -752,7 +743,6 @@ PIX       *pixd;
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
 
@@ -806,7 +796,6 @@ PIX       *pixd;
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
 
@@ -858,7 +847,6 @@ PIX       *pixd;
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
 
@@ -938,13 +926,12 @@ PIX        *pixt, *pixd;
     pixt = pixRemoveColormap(pixs, REMOVE_CMAP_TO_FULL_COLOR);
     pixd = pixCreate(w, h, 8);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     wplt = pixGetWpl(pixt);
     datat = pixGetData(pixt);
     wpld = pixGetWpl(pixd);
     datad = pixGetData(pixd);
-    invmax = (l_float32 *)LEPT_CALLOC(256, sizeof(l_float32));
-    ratio = (l_float32 *)LEPT_CALLOC(256, sizeof(l_float32));
+    invmax = (l_float32 *)CALLOC(256, sizeof(l_float32));
+    ratio = (l_float32 *)CALLOC(256, sizeof(l_float32));
     for (i = 1; i < 256; i++) {  /* i == 0  --> delta = sval = newval = 0 */
         invmax[i] = 1.0 / (l_float32)i;
         ratio[i] = (l_float32)i / (l_float32)refval;
@@ -971,8 +958,8 @@ PIX        *pixt, *pixd;
     }
 
     pixDestroy(&pixt);
-    LEPT_FREE(invmax);
-    LEPT_FREE(ratio);
+    FREE(invmax);
+    FREE(ratio);
     return pixd;
 }
 
@@ -1028,7 +1015,6 @@ PIXCMAP   *cmap;
     pixd = pixCopy(NULL, pixs);
     cmap = pixcmapCreateLinear(d, 1 << d);
     pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
     return pixd;
 }
 
@@ -1094,7 +1080,6 @@ PIXCMAP   *cmap;
     pixd = pixCreate(w, h, depth);
     cmap = pixcmapCreate(depth);
     pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
     pixCopyResolution(pixd, pixs);
 
     index = 0;
@@ -1182,7 +1167,6 @@ PIXCMAP   *cmap;
     pixGetDimensions(pixt, &w, &h, NULL);
     pixd = pixCreate(w, h, 32);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
     datat = pixGetData(pixt);
@@ -1198,7 +1182,7 @@ PIXCMAP   *cmap;
 
     pixDestroy(&pixt);
     pixcmapDestroy(&cmap);
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -1275,7 +1259,6 @@ PIX     *pixd;
         /* There are not more than 256 occupied leaf octcubes.
          * Quantize to those octcubes. */
     pixd = pixFewColorsOctcubeQuant2(pixs, 4, na, ncolors, NULL);
-    pixCopyInputFormat(pixd, pixs);
     numaDestroy(&na);
     return pixd;
 }
@@ -1388,8 +1371,8 @@ PIX     *pixg, *pixd;
 
     if (!pixd)
         return ERROR_INT("pixd not made", procName, 1);
-    pixCopyInputFormat(pixd, pixs);
-    return 0;
+    else
+        return 0;
 }
 
 
@@ -1401,7 +1384,7 @@ PIX     *pixg, *pixd;
  *  pixConvert16To8()
  *
  *      Input:  pixs (16 bpp)
- *              type (L_LS_BYTE, L_MS_BYTE, L_CLIP_TO_FF)
+ *              type (L_LS_BYTE, L_MS_BYTE, L_CLIP_TO_255)
  *      Return: pixd (8 bpp), or null on error
  *
  *  Notes:
@@ -1412,7 +1395,7 @@ PIX *
 pixConvert16To8(PIX     *pixs,
                 l_int32  type)
 {
-l_uint16   dword;
+l_uint16   dsword;
 l_int32    w, h, wpls, wpld, i, j;
 l_uint32   sword, first, second;
 l_uint32  *datas, *datad, *lines, *lined;
@@ -1424,13 +1407,12 @@ PIX       *pixd;
         return (PIX *)ERROR_PTR("pixs not defined", procName, NULL);
     if (pixGetDepth(pixs) != 16)
         return (PIX *)ERROR_PTR("pixs not 16 bpp", procName, NULL);
-    if (type != L_LS_BYTE && type != L_MS_BYTE && type != L_CLIP_TO_FF)
+    if (type != L_LS_BYTE && type != L_MS_BYTE && type != L_CLIP_TO_255)
         return (PIX *)ERROR_PTR("invalid type", procName, NULL);
 
     pixGetDimensions(pixs, &w, &h, NULL);
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
-    pixCopyInputFormat(pixd, pixs);
     pixCopyResolution(pixd, pixs);
     wpls = pixGetWpl(pixs);
     datas = pixGetData(pixs);
@@ -1444,22 +1426,22 @@ PIX       *pixd;
         if (type == L_LS_BYTE) {
             for (j = 0; j < wpls; j++) {
                 sword = *(lines + j);
-                dword = ((sword >> 8) & 0xff00) | (sword & 0xff);
-                SET_DATA_TWO_BYTES(lined, j, dword);
+                dsword = ((sword >> 8) & 0xff00) | (sword & 0xff);
+                SET_DATA_TWO_BYTES(lined, j, dsword);
             }
         } else if (type == L_MS_BYTE) {
             for (j = 0; j < wpls; j++) {
                 sword = *(lines + j);
-                dword = ((sword >> 16) & 0xff00) | ((sword >> 8) & 0xff);
-                SET_DATA_TWO_BYTES(lined, j, dword);
+                dsword = ((sword >> 16) & 0xff00) | ((sword >> 8) & 0xff);
+                SET_DATA_TWO_BYTES(lined, j, dsword);
             }
-        } else {  /* type == L_CLIP_TO_FF */
+        } else {  /* type == L_CLIP_TO_255 */
             for (j = 0; j < wpls; j++) {
                 sword = *(lines + j);
                 first = (sword >> 24) ? 255 : ((sword >> 16) & 0xff);
                 second = ((sword >> 8) & 0xff) ? 255 : (sword & 0xff);
-                dword = (first << 8) | second;
-                SET_DATA_TWO_BYTES(lined, j, dword);
+                dsword = (first << 8) | second;
+                SET_DATA_TWO_BYTES(lined, j, dsword);
             }
         }
     }
@@ -1518,10 +1500,9 @@ PIXCMAP   *cmap;
         return (PIX *)ERROR_PTR("cmap not made", procName, NULL);
     pixSetColormap(pixd, cmap);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Generate curve for transition part of color map */
-    if ((curve = (l_int32 *)LEPT_CALLOC(64, sizeof(l_int32)))== NULL)
+    if ((curve = (l_int32 *)CALLOC(64, sizeof(l_int32)))== NULL)
         return (PIX *)ERROR_PTR("curve not made", procName, NULL);
     if (gamma == 0.0) gamma = 1.0;
     invgamma = 1. / gamma;
@@ -1555,7 +1536,7 @@ PIXCMAP   *cmap;
         pixcmapAddColor(cmap, rval, gval, bval);
     }
 
-    LEPT_FREE(curve);
+    FREE(curve);
     return pixd;
 }
 
@@ -1622,7 +1603,6 @@ PIX  *pixd;
             pixd = pixConvert1To32(NULL, pixs, 0xffffffff, 0);
     }
 
-    pixCopyInputFormat(pixd, pixs);
     return pixd;
 }
 
@@ -1659,7 +1639,8 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
     if (pixGetDepth(pixs) != 1)
         return (PIX *)ERROR_PTR("pixs not 1 bpp", procName, NULL);
 
-    pixGetDimensions(pixs, &w, &h, NULL);
+    w = pixGetWidth(pixs);
+    h = pixGetHeight(pixs);
     if (pixd) {
         if (w != pixGetWidth(pixd) || h != pixGetHeight(pixd))
             return (PIX *)ERROR_PTR("pix sizes unequal", procName, pixd);
@@ -1670,10 +1651,9 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     }
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Use a table to convert 2 src bits at a time */
-    if ((tab = (l_uint32 *)LEPT_CALLOC(4, sizeof(l_uint32))) == NULL)
+    if ((tab = (l_uint32 *)CALLOC(4, sizeof(l_uint32))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     val[0] = val0;
     val[1] = val1;
@@ -1695,7 +1675,7 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -1742,7 +1722,6 @@ l_uint32  *datas, *datad, *lines, *lined;
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     }
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
     val[0] = val0;
     val[1] = val1;
@@ -1794,7 +1773,6 @@ PIXCMAP  *cmap;
     pixcmapAddColor(cmap, 255, 255, 255);
     pixcmapAddColor(cmap, 0, 0, 0);
     pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
 
     return pixd;
 }
@@ -1846,10 +1824,9 @@ l_uint32  *datas, *datad, *lines, *lined;
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     }
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Use a table to convert 8 src bits to 16 dest bits */
-    if ((tab = (l_uint16 *)LEPT_CALLOC(256, sizeof(l_uint16))) == NULL)
+    if ((tab = (l_uint16 *)CALLOC(256, sizeof(l_uint16))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     val[0] = val0;
     val[1] = val1;
@@ -1877,7 +1854,7 @@ l_uint32  *datas, *datad, *lines, *lined;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -1913,7 +1890,6 @@ PIXCMAP  *cmap;
     pixcmapAddColor(cmap, 255, 255, 255);
     pixcmapAddColor(cmap, 0, 0, 0);
     pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
 
     return pixd;
 }
@@ -1964,10 +1940,9 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     }
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Use a table to convert 8 src bits to 32 bit dest word */
-    if ((tab = (l_uint32 *)LEPT_CALLOC(256, sizeof(l_uint32))) == NULL)
+    if ((tab = (l_uint32 *)CALLOC(256, sizeof(l_uint32))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     val[0] = val0;
     val[1] = val1;
@@ -1995,7 +1970,7 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -2003,39 +1978,6 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
 /*---------------------------------------------------------------------------*
  *               Conversion from 1, 2 and 4 bpp to 8 bpp                     *
  *---------------------------------------------------------------------------*/
-/*!
- *  pixConvert1To8Cmap()
- *
- *      Input:  pixs (1 bpp)
- *      Return: pixd (8 bpp, cmapped)
- *
- *  Notes:
- *      (1) Input 0 is mapped to (255, 255, 255); 1 is mapped to (0, 0, 0)
- */
-PIX *
-pixConvert1To8Cmap(PIX  *pixs)
-{
-PIX      *pixd;
-PIXCMAP  *cmap;
-
-    PROCNAME("pixConvert1To8Cmap");
-
-    if (!pixs)
-        return (PIX *)ERROR_PTR("pixs not defined", procName, NULL);
-    if (pixGetDepth(pixs) != 1)
-        return (PIX *)ERROR_PTR("pixs not 1 bpp", procName, NULL);
-
-    if ((pixd = pixConvert1To8(NULL, pixs, 0, 1)) == NULL)
-        return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
-    cmap = pixcmapCreate(8);
-    pixcmapAddColor(cmap, 255, 255, 255);
-    pixcmapAddColor(cmap, 0, 0, 0);
-    pixSetColormap(pixd, cmap);
-    pixCopyInputFormat(pixd, pixs);
-    return pixd;
-}
-
-
 /*!
  *  pixConvert1To8()
  *
@@ -2050,8 +1992,15 @@ PIXCMAP  *cmap;
  *      (2) If pixd is not null, it must be of equal width and height
  *          as pixs.  It is always returned.
  *      (3) A simple unpacking might use val0 = 0 and val1 = 255, or v.v.
- *      (4) To have a colormap associated with the 8 bpp pixd,
- *          usepixConvert1To8Cmap().
+ *      (4) In a typical application where one wants to use a colormap
+ *          with the dest, you can use val0 = 0, val1 = 1 to make a
+ *          non-cmapped 8 bpp pix, and then make a colormap and set 0
+ *          and 1 to the desired colors.  Here is an example:
+ *             pixd = pixConvert1To8(NULL, pixs, 0, 1);
+ *             cmap = pixcmapCreate(8);
+ *             pixcmapAddColor(cmap, 255, 255, 255);
+ *             pixcmapAddColor(cmap, 0, 0, 0);
+ *             pixSetColormap(pixd, cmap);
  */
 PIX *
 pixConvert1To8(PIX     *pixd,
@@ -2082,10 +2031,9 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
             return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     }
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Use a table to convert 4 src bits at a time */
-    if ((tab = (l_uint32 *)LEPT_CALLOC(16, sizeof(l_uint32))) == NULL)
+    if ((tab = (l_uint32 *)CALLOC(16, sizeof(l_uint32))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     val[0] = val0;
     val[1] = val1;
@@ -2109,7 +2057,7 @@ l_uint32  *tab, *datas, *datad, *lines, *lined;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -2173,7 +2121,6 @@ PIXCMAP   *cmaps, *cmapd;
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datas = pixGetData(pixs);
     wpls = pixGetWpl(pixs);
     datad = pixGetData(pixd);
@@ -2208,7 +2155,7 @@ PIXCMAP   *cmaps, *cmapd;
         /* Last case: no colormap in either pixs or pixd.
          * Use input values and build a table to convert 1 src byte
          * (4 src pixels) at a time */
-    if ((tab = (l_uint32 *)LEPT_CALLOC(256, sizeof(l_uint32))) == NULL)
+    if ((tab = (l_uint32 *)CALLOC(256, sizeof(l_uint32))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     val[0] = val0;
     val[1] = val1;
@@ -2230,7 +2177,7 @@ PIXCMAP   *cmaps, *cmapd;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -2282,7 +2229,6 @@ PIXCMAP   *cmaps, *cmapd;
     if ((pixd = pixCreate(w, h, 8)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datas = pixGetData(pixs);
     wpls = pixGetWpl(pixs);
     datad = pixGetData(pixd);
@@ -2370,7 +2316,6 @@ PIX       *pixt, *pixd;
 
     pixd = pixCreate(w, h, 16);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datat = pixGetData(pixt);
     datad = pixGetData(pixd);
     wplt = pixGetWpl(pixt);
@@ -2532,10 +2477,16 @@ PIXCMAP  *cmap;
         return (PIX *)ERROR_PTR("depth not {1,2,4,8,16,32}", procName, NULL);
 
     if (d == 1) {
-        if (cmapflag)
-            return pixConvert1To8Cmap(pixs);
-        else
+        if (!cmapflag) {
             return pixConvert1To8(NULL, pixs, 255, 0);
+        } else {
+            pixd = pixConvert1To8(NULL, pixs, 0, 1);
+            cmap = pixcmapCreate(8);
+            pixcmapAddColor(cmap, 255, 255, 255);
+            pixcmapAddColor(cmap, 0, 0, 0);
+            pixSetColormap(pixd, cmap);
+            return pixd;
+        }
     } else if (d == 2) {
         return pixConvert2To8(pixs, 0, 85, 170, 255, cmapflag);
     } else if (d == 4) {
@@ -2808,7 +2759,7 @@ PIX       *pixd;
         return pixRemoveColormap(pixs, REMOVE_CMAP_TO_FULL_COLOR);
 
         /* Replication table */
-    if ((tab = (l_uint32 *)LEPT_CALLOC(256, sizeof(l_uint32))) == NULL)
+    if ((tab = (l_uint32 *)CALLOC(256, sizeof(l_uint32))) == NULL)
         return (PIX *)ERROR_PTR("tab not made", procName, NULL);
     for (i = 0; i < 256; i++)
       tab[i] = (i << 24) | (i << 16) | (i << 8);
@@ -2819,7 +2770,6 @@ PIX       *pixd;
     if ((pixd = pixCreate(w, h, 32)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
 
@@ -2832,7 +2782,7 @@ PIX       *pixd;
         }
     }
 
-    LEPT_FREE(tab);
+    FREE(tab);
     return pixd;
 }
 
@@ -3002,108 +2952,6 @@ PIX       *pixd;
 
 
 /*---------------------------------------------------------------------------*
- *            Conversion between 32 bpp (1 spp) and 16 or 8 bpp              *
- *---------------------------------------------------------------------------*/
-/*!
- *  pixConvert32To16()
- *
- *      Input:  pixs (32 bpp, single component)
- *              type (L_LS_TWO_BYTES, L_MS_TWO_BYTES, L_CLIP_TO_FFFF)
- *      Return: pixd (16 bpp ), or null on error
- *
- *  Notes:
- *      (1) The data in pixs is typically used for labelling.
- *          It is an array of l_uint32 values, not rgb or rgba.
- */
-PIX *
-pixConvert32To16(PIX     *pixs,
-                 l_int32  type)
-{
-l_uint16   dword;
-l_int32    w, h, i, j, wpls, wpld;
-l_uint32   sword;
-l_uint32  *datas, *lines, *datad, *lined;
-PIX       *pixd;
-
-    PROCNAME("pixConvert32to16");
-
-    if (!pixs || pixGetDepth(pixs) != 32)
-        return (PIX *)ERROR_PTR("pixs undefined or not 32 bpp", procName, NULL);
-    if (type != L_LS_TWO_BYTES && type != L_MS_TWO_BYTES &&
-        type != L_CLIP_TO_FFFF)
-        return (PIX *)ERROR_PTR("invalid type", procName, NULL);
-
-    pixGetDimensions(pixs, &w, &h, NULL);
-    if ((pixd = pixCreate(w, h, 16)) == NULL)
-        return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
-    pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
-    wpls = pixGetWpl(pixs);
-    datas = pixGetData(pixs);
-    wpld = pixGetWpl(pixd);
-    datad = pixGetData(pixd);
-
-    for (i = 0; i < h; i++) {
-        lines = datas + i * wpls;
-        lined = datad + i * wpld;
-        if (type == L_LS_TWO_BYTES) {
-            for (j = 0; j < wpls; j++) {
-                sword = *(lines + j);
-                dword = sword & 0xffff;
-                SET_DATA_TWO_BYTES(lined, j, dword);
-            }
-        } else if (type == L_MS_TWO_BYTES) {
-            for (j = 0; j < wpls; j++) {
-                sword = *(lines + j);
-                dword = sword >> 16;
-                SET_DATA_TWO_BYTES(lined, j, dword);
-            }
-        } else {  /* type == L_CLIP_TO_FFFF */
-            for (j = 0; j < wpls; j++) {
-                sword = *(lines + j);
-                dword = (sword >> 16) ? 0xffff : (sword & 0xffff);
-                SET_DATA_TWO_BYTES(lined, j, dword);
-            }
-        }
-    }
-
-    return pixd;
-}
-
-
-/*!
- *  pixConvert32To8()
- *
- *      Input:  pixs (32 bpp, single component)
- *              type16 (L_LS_TWO_BYTES, L_MS_TWO_BYTES, L_CLIP_TO_FFFF)
- *              type8 (L_LS_BYTE, L_MS_BYTE, L_CLIP_TO_FF)
- *      Return: pixd (8 bpp ), or null on error
- */
-PIX *
-pixConvert32To8(PIX     *pixs,
-                l_int32  type16,
-                l_int32  type8)
-{
-PIX  *pix1, *pixd;
-
-    PROCNAME("pixConvert32to8");
-
-    if (!pixs || pixGetDepth(pixs) != 32)
-        return (PIX *)ERROR_PTR("pixs undefined or not 32 bpp", procName, NULL);
-    if (type16 != L_LS_TWO_BYTES && type16 != L_MS_TWO_BYTES &&
-        type16 != L_CLIP_TO_FFFF)
-        return (PIX *)ERROR_PTR("invalid type16", procName, NULL);
-    if (type8 != L_LS_BYTE && type8 != L_MS_BYTE && type8 != L_CLIP_TO_FF)
-        return (PIX *)ERROR_PTR("invalid type8", procName, NULL);
-
-    pix1 = pixConvert32To16(pixs, type16);
-    pixd = pixConvert16To8(pix1, type8);
-    pixDestroy(&pix1);
-    return pixd;
-}
-
-
-/*---------------------------------------------------------------------------*
  *        Removal of alpha component by blending with white background       *
  *---------------------------------------------------------------------------*/
 /*!
@@ -3217,7 +3065,6 @@ PIX       *pixd;
     if ((pixd = pixCreate(w, h, d)) == NULL)
         return (PIX *)ERROR_PTR("pixd not made", procName, NULL);
     pixCopyResolution(pixd, pixs);
-    pixCopyInputFormat(pixd, pixs);
 
         /* Unpack the bits */
     datas = pixGetData(pixs);
@@ -3432,7 +3279,7 @@ pixConvertGrayToSubpixelRGB(PIX       *pixs,
 {
 l_int32    w, h, d, wd, hd, wplt, wpld, i, j, rval, gval, bval, direction;
 l_uint32  *datat, *datad, *linet, *lined;
-PIX       *pix1, *pix2, *pixd;
+PIX       *pixt1, *pixt2, *pixd;
 PIXCMAP   *cmap;
 
     PROCNAME("pixConvertGrayToSubpixelRGB");
@@ -3452,20 +3299,20 @@ PIXCMAP   *cmap;
     direction =
         (order == L_SUBPIXEL_ORDER_RGB || order == L_SUBPIXEL_ORDER_BGR)
         ? L_HORIZ : L_VERT;
-    pix1 = pixRemoveColormap(pixs, REMOVE_CMAP_TO_GRAYSCALE);
+    pixt1 = pixRemoveColormap(pixs, REMOVE_CMAP_TO_GRAYSCALE);
     if (direction == L_HORIZ)
-        pix2 = pixScale(pix1, 3.0 * scalex, scaley);
+        pixt2 = pixScale(pixt1, 3.0 * scalex, scaley);
     else  /* L_VERT */
-        pix2 = pixScale(pix1, scalex, 3.0 * scaley);
+        pixt2 = pixScale(pixt1, scalex, 3.0 * scaley);
 
-    pixGetDimensions(pix2, &w, &h, NULL);
+    pixGetDimensions(pixt2, &w, &h, NULL);
     wd = (direction == L_HORIZ) ? w / 3 : w;
     hd = (direction == L_VERT) ? h / 3 : h;
     pixd = pixCreate(wd, hd, 32);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
-    datat = pixGetData(pix2);
-    wplt = pixGetWpl(pix2);
+    datat = pixGetData(pixt2);
+    wplt = pixGetWpl(pixt2);
     if (direction == L_HORIZ) {
         for (i = 0; i < hd; i++) {
             linet = datat + i * wplt;
@@ -3496,8 +3343,8 @@ PIXCMAP   *cmap;
         }
     }
 
-    pixDestroy(&pix1);
-    pixDestroy(&pix2);
+    pixDestroy(&pixt1);
+    pixDestroy(&pixt2);
     return pixd;
 }
 
@@ -3535,7 +3382,7 @@ pixConvertColorToSubpixelRGB(PIX       *pixs,
 {
 l_int32    w, h, d, wd, hd, wplt, wpld, i, j, rval, gval, bval, direction;
 l_uint32  *datat, *datad, *linet, *lined;
-PIX       *pix1, *pix2, *pixd;
+PIX       *pixt1, *pixt2, *pixd;
 PIXCMAP   *cmap;
 
     PROCNAME("pixConvertColorToSubpixelRGB");
@@ -3555,21 +3402,20 @@ PIXCMAP   *cmap;
     direction =
         (order == L_SUBPIXEL_ORDER_RGB || order == L_SUBPIXEL_ORDER_BGR)
         ? L_HORIZ : L_VERT;
-    pix1 = pixRemoveColormap(pixs, REMOVE_CMAP_TO_FULL_COLOR);
+    pixt1 = pixRemoveColormap(pixs, REMOVE_CMAP_TO_FULL_COLOR);
     if (direction == L_HORIZ)
-        pix2 = pixScale(pix1, 3.0 * scalex, scaley);
+        pixt2 = pixScale(pixt1, 3.0 * scalex, scaley);
     else  /* L_VERT */
-        pix2 = pixScale(pix1, scalex, 3.0 * scaley);
+        pixt2 = pixScale(pixt1, scalex, 3.0 * scaley);
 
-    pixGetDimensions(pix2, &w, &h, NULL);
+    pixGetDimensions(pixt2, &w, &h, NULL);
     wd = (direction == L_HORIZ) ? w / 3 : w;
     hd = (direction == L_VERT) ? h / 3 : h;
     pixd = pixCreate(wd, hd, 32);
-    pixCopyInputFormat(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
-    datat = pixGetData(pix2);
-    wplt = pixGetWpl(pix2);
+    datat = pixGetData(pixt2);
+    wplt = pixGetWpl(pixt2);
     if (direction == L_HORIZ) {
         for (i = 0; i < hd; i++) {
             linet = datat + i * wplt;
@@ -3609,7 +3455,7 @@ PIXCMAP   *cmap;
     if (pixGetSpp(pixs) == 4)
         pixScaleAndTransferAlpha(pixd, pixs, scalex, scaley);
 
-    pixDestroy(&pix1);
-    pixDestroy(&pix2);
+    pixDestroy(&pixt1);
+    pixDestroy(&pixt2);
     return pixd;
 }

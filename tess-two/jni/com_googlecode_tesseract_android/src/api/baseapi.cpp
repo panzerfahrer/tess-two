@@ -499,7 +499,7 @@ char* TessBaseAPI::TesseractRect(const unsigned char* imagedata,
            bytes_per_pixel, bytes_per_line);
   SetRectangle(left, top, width, height);
 
-  return GetUTF8Text();
+  return GetUTF8Text(NULL);
 }
 
 /**
@@ -747,7 +747,7 @@ void TessBaseAPI::DumpPGM(const char* filename) {
   fclose(fp);
 }
 
-#ifndef NO_CUBE_BUILD
+#ifndef ANDROID_BUILD
 /**
  * Placeholder for call to Cube and test that the input data is correct.
  * reskew is the direction of baselines in the skewed image in
@@ -792,7 +792,7 @@ int CubeAPITest(Boxa* boxa_blocks, Pixa* pixa_blocks,
   ASSERT_HOST(pr_word == word_count);
   return 0;
 }
-#endif  // NO_CUBE_BUILD
+#endif
 
 /**
  * Runs page layout analysis in the mode set by SetPageSegMode.
@@ -987,8 +987,7 @@ bool TessBaseAPI::ProcessPagesFileList(FILE *flist,
   }
 
   // Begin producing output
-  const char* kUnknownTitle = "";
-  if (renderer && !renderer->BeginDocument(kUnknownTitle)) {
+  if (renderer && !renderer->BeginDocument(unknown_title_)) {
     return false;
   }
 
@@ -1033,7 +1032,7 @@ bool TessBaseAPI::ProcessPagesMultipageTiff(const l_uint8 *data,
   Pix *pix = NULL;
 #ifdef USE_OPENCL
   OpenclDevice od;
-#endif  // USE_OPENCL
+#endif
   int page = (tessedit_page_number >= 0) ? tessedit_page_number : 0;
   for (; ; ++page) {
     if (tessedit_page_number >= 0)
@@ -1043,11 +1042,11 @@ bool TessBaseAPI::ProcessPagesMultipageTiff(const l_uint8 *data,
       // FIXME(jbreiden) Not implemented.
       pix = od.pixReadMemTiffCl(data, size, page);
     } else {
-#endif  // USE_OPENCL
+#endif
       pix = pixReadMemTiff(data, size, page);
 #ifdef USE_OPENCL
     }
-#endif  // USE_OPENCL
+#endif
     if (pix == NULL) break;
     tprintf("Page %d\n", page + 1);
     char page_str[kMaxIntSize];
@@ -1162,8 +1161,7 @@ bool TessBaseAPI::ProcessPagesInternal(const char* filename,
   }
 
   // Begin the output
-  const char* kUnknownTitle = "";
-  if (renderer && !renderer->BeginDocument(kUnknownTitle)) {
+  if (renderer && !renderer->BeginDocument(unknown_title_)) {
     pixDestroy(&pix);
     return false;
   }
@@ -1198,39 +1196,35 @@ bool TessBaseAPI::ProcessPage(Pix* pix, int page_index, const char* filename,
   SetInputName(filename);
   SetImage(pix);
   bool failed = false;
-
-  if (tesseract_->tessedit_pageseg_mode == PSM_AUTO_ONLY) {
-    // Disabled character recognition
-    PageIterator* it = AnalyseLayout();
-
-    if (it == NULL) {
-      failed = true;
-    } else {
-      delete it;
-    }
-  } else if (tesseract_->tessedit_pageseg_mode == PSM_OSD_ONLY) {
-    failed = FindLines() != 0;
-  } else if (timeout_millisec > 0) {
+  if (timeout_millisec > 0) {
     // Running with a timeout.
     ETEXT_DESC monitor;
     monitor.cancel = NULL;
     monitor.cancel_this = NULL;
     monitor.set_deadline_msecs(timeout_millisec);
-
     // Now run the main recognition.
     failed = Recognize(&monitor) < 0;
+  } else if (tesseract_->tessedit_pageseg_mode == PSM_OSD_ONLY ||
+             tesseract_->tessedit_pageseg_mode == PSM_AUTO_ONLY) {
+    // Disabled character recognition.
+    PageIterator* it = AnalyseLayout();
+    if (it == NULL) {
+      failed = true;
+    } else {
+      delete it;
+      PERF_COUNT_END
+      return true;
+    }
   } else {
     // Normal layout and character recognition with no timeout.
     failed = Recognize(NULL) < 0;
   }
-
   if (tesseract_->tessedit_write_images) {
 #ifndef ANDROID_BUILD
     Pix* page_pix = GetThresholdedImage();
     pixWrite("tessinput.tif", page_pix, IFF_TIFF_G4);
-#endif  // ANDROID_BUILD
+#endif
   }
-
   if (failed && retry_config != NULL && retry_config[0] != '\0') {
     // Save current config variables before switching modes.
     FILE* fp = fopen(kOldVarsFile, "wb");
@@ -1247,7 +1241,6 @@ bool TessBaseAPI::ProcessPage(Pix* pix, int page_index, const char* filename,
   if (renderer && !failed) {
     failed = !renderer->AddImage(this);
   }
-
   PERF_COUNT_END
   return !failed;
 }
@@ -1300,9 +1293,9 @@ MutableIterator* TessBaseAPI::GetMutableIterator() {
 }
 
 /** Make a text string from the internal data structures. */
-char* TessBaseAPI::GetUTF8Text() {
+char* TessBaseAPI::GetUTF8Text(struct ETEXT_DESC* monitor) {
   if (tesseract_ == NULL ||
-      (!recognition_done_ && Recognize(NULL) < 0))
+      (!recognition_done_ && Recognize(monitor) < 0))
     return NULL;
   STRING text("");
   ResultIterator *it = GetIterator();
@@ -1401,7 +1394,7 @@ static void AddBoxTohOCR(const PageIterator *it,
  * GetHOCRText
  * STL removed from original patch submission and refactored by rays.
  */
-char* TessBaseAPI::GetHOCRText(struct ETEXT_DESC* monitor, int page_number) {
+char* TessBaseAPI::GetHOCRText(int page_number, struct ETEXT_DESC* monitor) {
   if (tesseract_ == NULL ||
       (page_res_ == NULL && Recognize(monitor) < 0))
     return NULL;
@@ -1419,12 +1412,12 @@ char* TessBaseAPI::GetHOCRText(struct ETEXT_DESC* monitor, int page_number) {
 #ifdef _WIN32
   // convert input name from ANSI encoding to utf-8
   int str16_len = MultiByteToWideChar(CP_ACP, 0, input_file_->string(), -1,
-                                      NULL, 0);
+                                      NULL, NULL);
   wchar_t *uni16_str = new WCHAR[str16_len];
   str16_len = MultiByteToWideChar(CP_ACP, 0, input_file_->string(), -1,
                                   uni16_str, str16_len);
   int utf8_len = WideCharToMultiByte(CP_UTF8, 0, uni16_str, str16_len, NULL,
-                                     0, NULL, NULL);
+                                     NULL, NULL, NULL);
   char *utf8_str = new char[utf8_len];
   WideCharToMultiByte(CP_UTF8, 0, uni16_str, str16_len, utf8_str,
                       utf8_len, NULL, NULL);
@@ -1665,7 +1658,7 @@ char* TessBaseAPI::GetUNLVText() {
             word->word->space() > 0 &&
             !word->word->flag(W_FUZZY_NON) &&
             !word->word->flag(W_FUZZY_SP)) {
-          /* Write a space to separate from preceding good text */
+          /* Write a space to separate from preceeding good text */
           *ptr++ = ' ';
           last_char_was_tilde = false;
         }
@@ -1739,47 +1732,6 @@ char* TessBaseAPI::GetUNLVText() {
   return result;
 }
 
-  /**
-   * The recognized text is returned as a char* which is coded
-   * as UTF8 and must be freed with the delete [] operator.
-   * page_number is a 0-based page index that will appear in the osd file.
-   */
-char* TessBaseAPI::GetOsdText(int page_number) {
-  OSResults osr;
-
-  bool osd = DetectOS(&osr);
-  if (!osd) {
-     return NULL;
-  }
-
-  int orient_id = osr.best_result.orientation_id;
-  int script_id = osr.get_best_script(orient_id);
-  float orient_conf = osr.best_result.oconfidence;
-  float script_conf = osr.best_result.sconfidence;
-  const char* script_name = 
-      osr.unicharset->get_script_from_script_id(script_id);
-
-  // clockwise orientation of the input image, in degrees
-  int orient_deg = orient_id * 90; 
-
-  // clockwise rotation needed to make the page upright
-  int rotate =  OrientationIdToValue(orient_id);
-
-  char* osd_buf = new char[255];
-  snprintf(osd_buf, 255,
-          "Page number: %d\n"
-          "Orientation in degrees: %d\n"
-          "Rotate: %d\n"
-          "Orientation confidence: %.2f\n"
-          "Script: %s\n"
-          "Script confidence: %.2f\n",
-          page_number,
-          orient_deg, rotate, orient_conf,
-          script_name, script_conf);
-
-  return osd_buf;
-}
-
 /** Returns the average word confidence for Tesseract page result. */
 int TessBaseAPI::MeanTextConf() {
   int* conf = AllWordConfidences();
@@ -1834,7 +1786,7 @@ bool TessBaseAPI::AdaptToWordStr(PageSegMode mode, const char* wordstr) {
   PageSegMode current_psm = GetPageSegMode();
   SetPageSegMode(mode);
   SetVariable("classify_enable_learning", "0");
-  char* text = GetUTF8Text();
+  char* text = GetUTF8Text(NULL);
   if (debug) {
     tprintf("Trying to adapt \"%s\" to \"%s\"\n", text, wordstr);
   }
@@ -2679,12 +2631,12 @@ int TessBaseAPI::NumDawgs() const {
   return tesseract_ == NULL ? 0 : tesseract_->getDict().NumDawgs();
 }
 
-#ifndef NO_CUBE_BUILD
+#ifndef ANDROID_BUILD
 /** Return a pointer to underlying CubeRecoContext object if present. */
 CubeRecoContext *TessBaseAPI::GetCubeRecoContext() const {
   return (tesseract_ == NULL) ? NULL : tesseract_->GetCubeRecoContext();
 }
-#endif  // NO_CUBE_BUILD
+#endif
 
 /** Escape a char string - remove <>&"' with HTML codes. */
 STRING HOcrEscape(const char* text) {

@@ -424,7 +424,7 @@ TESS_API int TESS_CALL TessBaseAPIRecognizeForChopTest(TessBaseAPI* handle, ETEX
 TESS_API BOOL TESS_CALL TessBaseAPIProcessPages(TessBaseAPI* handle, const char* filename, const char* retry_config,
                                                 int timeout_millisec, TessResultRenderer* renderer)
 {
-    if (handle->ProcessPages(filename, retry_config, timeout_millisec, renderer))
+    if (handle->ProcessPages(filename, retry_config, timeout_millisec, renderer))    
         return TRUE;
     else
         return FALSE;
@@ -451,12 +451,12 @@ TESS_API TessMutableIterator* TESS_CALL TessBaseAPIGetMutableIterator(TessBaseAP
 
 TESS_API char* TESS_CALL TessBaseAPIGetUTF8Text(TessBaseAPI* handle)
 {
-    return handle->GetUTF8Text();
+    return handle->GetUTF8Text(NULL);
 }
 
 TESS_API char* TESS_CALL TessBaseAPIGetHOCRText(TessBaseAPI* handle, int page_number)
 {
-    return handle->GetHOCRText(NULL, page_number);
+    return handle->GetHOCRText(page_number, NULL);
 }
 
 TESS_API char* TESS_CALL TessBaseAPIGetBoxText(TessBaseAPI* handle, int page_number)
@@ -581,12 +581,10 @@ TESS_API void TESS_CALL TessBaseAPIInitTruthCallback(TessBaseAPI* handle, TessTr
     handle->InitTruthCallback(cb);
 }
 
-#ifndef NO_CUBE_BUILD
 TESS_API TessCubeRecoContext* TESS_CALL TessBaseAPIGetCubeRecoContext(const TessBaseAPI* handle)
 {
     return handle->GetCubeRecoContext();
 }
-#endif  // NO_CUBE_BUILD
 
 TESS_API void TESS_CALL TessBaseAPISetMinOrientationMargin(TessBaseAPI* handle, double margin)
 {

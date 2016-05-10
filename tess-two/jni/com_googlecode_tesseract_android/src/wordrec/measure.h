@@ -79,7 +79,7 @@ typedef struct
 /**********************************************************************
  * new_measurement
  *
- * Initialize a record to hold a measurement of a group of individual
+ * Initalize a record to hold a measurement of a group of individual
  * samples.
  **********************************************************************/
 

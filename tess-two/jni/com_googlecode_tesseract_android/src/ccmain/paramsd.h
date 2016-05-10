@@ -24,7 +24,7 @@
 #define VARABLED_H
 
 #include "elst.h"
-#ifndef NO_CUBE_BUILD
+#ifndef ANDROID_BUILD
 #include "scrollview.h"
 #endif
 #include "params.h"

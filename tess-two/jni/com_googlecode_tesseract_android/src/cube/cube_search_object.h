@@ -114,7 +114,7 @@ class CubeSearchObject : public SearchObject {
             end_pt <= (start_pt + max_seg_per_char_));
   }
   // computes the space and no space costs at gaps between segments
-  // return true on success
+  // return true on sucess
   bool ComputeSpaceCosts();
 };
 }

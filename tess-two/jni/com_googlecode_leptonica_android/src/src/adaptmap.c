@@ -494,7 +494,6 @@ PIX       *pixmr, *pixmg, *pixmb, *pixmri, *pixmgi, *pixmbi;
 
     if (!pixd)
         ERROR_PTR("pixd not made", procName, NULL);
-    pixCopyResolution(pixd, pixs);
     return pixd;
 }
 
@@ -1165,9 +1164,6 @@ PIX       *pixmr, *pixmg, *pixmb;
     *ppixmr = pixmr;
     *ppixmg = pixmg;
     *ppixmb = pixmb;
-    pixCopyResolution(*ppixmr, pixs);
-    pixCopyResolution(*ppixmg, pixs);
-    pixCopyResolution(*ppixmb, pixs);
     return 0;
 }
 
@@ -1383,9 +1379,6 @@ PIX       *pixm, *pixmr, *pixmg, *pixmb, *pixt1, *pixt2, *pixt3, *pixims;
     *ppixmr = pixmr;
     *ppixmg = pixmg;
     *ppixmb = pixmb;
-    pixCopyResolution(*ppixmr, pixs);
-    pixCopyResolution(*ppixmg, pixs);
-    pixCopyResolution(*ppixmb, pixs);
     return 0;
 }
 
@@ -1572,7 +1565,6 @@ PIX      *pixd;
         }
     }
 
-    pixCopyResolution(pixd, pixs);
     return pixd;
 }
 
@@ -1838,7 +1830,6 @@ PIX       *pixsm, *pixd;
     }
 
     pixDestroy(&pixsm);
-    pixCopyResolution(pixd, pixs);
     return pixd;
 }
 
@@ -2047,7 +2038,7 @@ PIX       *pixd;
          * 4x faster when using the LUT.  C'est la vie.  */
     lut = NULL;
     if (w * h > 100000) {  /* more pixels than 2^16 */
-        if ((lut = (l_uint8 *)LEPT_CALLOC(0x10000, sizeof(l_uint8))) == NULL)
+        if ((lut = (l_uint8 *)CALLOC(0x10000, sizeof(l_uint8))) == NULL)
             return (PIX *)ERROR_PTR("lut not made", procName, NULL);
         for (i = 0; i < 256; i++) {
             for (j = 0; j < 256; j++) {
@@ -2058,7 +2049,6 @@ PIX       *pixd;
     }
 
     pixd = pixCreateNoInit(w, h, 8);
-    pixCopyResolution(pixd, pixs);
     datad = pixGetData(pixd);
     wpld = pixGetWpl(pixd);
     datas = pixGetData(pixs);
@@ -2088,7 +2078,7 @@ PIX       *pixd;
         }
     }
 
-    if (lut) LEPT_FREE(lut);
+    if (lut) FREE(lut);
     return pixd;
 }
 
@@ -2196,9 +2186,9 @@ PIXCMAP   *cmap;
     numaDestroy(&nar);
     numaDestroy(&nag);
     numaDestroy(&nab);
-    LEPT_FREE(rarray);
-    LEPT_FREE(garray);
-    LEPT_FREE(barray);
+    FREE(rarray);
+    FREE(garray);
+    FREE(barray);
     return pixd;
 }
 
@@ -2346,7 +2336,7 @@ pixThresholdSpreadNorm(PIX       *pixs,
                        PIX      **ppixb,
                        PIX      **ppixd)
 {
-PIX  *pixe, *pixet, *pixsd, *pixg1, *pixg2, *pixth;
+PIX     *pixe, *pixet, *pixsd, *pixg1, *pixg2, *pixth;
 
     PROCNAME("pixThresholdSpreadNorm");
 
@@ -2602,10 +2592,9 @@ PIX     *pixmin1, *pixmax1, *pixmin2, *pixmax2;
 
     PROCNAME("pixMinMaxTiles");
 
-    if (ppixmin) *ppixmin = NULL;
-    if (ppixmax) *ppixmax = NULL;
     if (!ppixmin || !ppixmax)
         return ERROR_INT("&pixmin or &pixmax undefined", procName, 1);
+    *ppixmin = *ppixmax = NULL;
     if (!pixs || pixGetDepth(pixs) != 8)
         return ERROR_INT("pixs undefined or not 8 bpp", procName, 1);
     if (pixGetColormap(pixs))
@@ -2649,8 +2638,6 @@ PIX     *pixmin1, *pixmax1, *pixmin2, *pixmax2;
         *ppixmin = pixClone(pixmin2);
         *ppixmax = pixClone(pixmax2);
     }
-    pixCopyResolution(*ppixmin, pixs);
-    pixCopyResolution(*ppixmax, pixs);
     pixDestroy(&pixmin2);
     pixDestroy(&pixmax2);
 
@@ -2785,7 +2772,7 @@ l_uint32  *data, *datamin, *datamax, *line, *tline, *linemin, *linemax;
         return (PIX *)ERROR_PTR("sx and/or sy less than 5", procName, pixd);
 
     pixd = pixCopy(pixd, pixs);
-    iaa = (l_int32 **)LEPT_CALLOC(256, sizeof(l_int32 *));
+    iaa = (l_int32 **)CALLOC(256, sizeof(l_int32 *));
     pixGetDimensions(pixd, &w, &h, NULL);
 
     data = pixGetData(pixd);
@@ -2822,8 +2809,8 @@ l_uint32  *data, *datamin, *datamax, *line, *tline, *linemin, *linemax;
     }
 
     for (i = 0; i < 256; i++)
-        if (iaa[i]) LEPT_FREE(iaa[i]);
-    LEPT_FREE(iaa);
+        if (iaa[i]) FREE(iaa[i]);
+    FREE(iaa);
     return pixd;
 }
 
@@ -2853,7 +2840,7 @@ l_float32  factor;
     if (iaa[diff] != NULL)  /* already have it */
        return iaa[diff];
 
-    if ((ia = (l_int32 *)LEPT_CALLOC(256, sizeof(l_int32))) == NULL)
+    if ((ia = (l_int32 *)CALLOC(256, sizeof(l_int32))) == NULL)
         return (l_int32 *)ERROR_PTR("ia not made", procName, NULL);
     iaa[diff] = ia;
     if (diff == 0) {  /* shouldn't happen */

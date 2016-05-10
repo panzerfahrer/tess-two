@@ -371,7 +371,7 @@ PIX       *pixd;
                 }
             }
         }
-        LEPT_FREE(lines);
+        FREE(lines);
         return pixd;
     }
 
@@ -412,7 +412,7 @@ PIX       *pixd;
         }
     }
 
-    LEPT_FREE(lines);
+    FREE(lines);
     return pixd;
 }
 

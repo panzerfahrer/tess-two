@@ -157,7 +157,7 @@ GPLOT  *gplot;
         outformat != GPLOT_LATEX)
         return (GPLOT *)ERROR_PTR("outformat invalid", procName, NULL);
 
-    if ((gplot = (GPLOT *)LEPT_CALLOC(1, sizeof(GPLOT))) == NULL)
+    if ((gplot = (GPLOT *)CALLOC(1, sizeof(GPLOT))) == NULL)
         return (GPLOT *)ERROR_PTR("gplot not made", procName, NULL);
     gplot->cmddata = sarrayCreate(0);
     gplot->datanames = sarrayCreate(0);
@@ -211,22 +211,22 @@ GPLOT  *gplot;
     if ((gplot = *pgplot) == NULL)
         return;
 
-    LEPT_FREE(gplot->rootname);
-    LEPT_FREE(gplot->cmdname);
+    FREE(gplot->rootname);
+    FREE(gplot->cmdname);
     sarrayDestroy(&gplot->cmddata);
     sarrayDestroy(&gplot->datanames);
     sarrayDestroy(&gplot->plotdata);
     sarrayDestroy(&gplot->plottitles);
     numaDestroy(&gplot->plotstyles);
-    LEPT_FREE(gplot->outname);
+    FREE(gplot->outname);
     if (gplot->title)
-        LEPT_FREE(gplot->title);
+        FREE(gplot->title);
     if (gplot->xlabel)
-        LEPT_FREE(gplot->xlabel);
+        FREE(gplot->xlabel);
     if (gplot->ylabel)
-        LEPT_FREE(gplot->ylabel);
+        FREE(gplot->ylabel);
 
-    LEPT_FREE(gplot);
+    FREE(gplot);
     *pgplot = NULL;
     return;
 }
@@ -497,7 +497,7 @@ FILE    *fp;
         return ERROR_INT("cmd stream not opened", procName, 1);
     fwrite(cmdstr, 1, strlen(cmdstr), fp);
     fclose(fp);
-    LEPT_FREE(cmdstr);
+    FREE(cmdstr);
     return 0;
 }
 
@@ -560,7 +560,7 @@ gplotSimple1(NUMA        *na,
              const char  *outroot,
              const char  *title)
 {
-    return gplotSimpleXY1(NULL, na, GPLOT_LINES, outformat, outroot, title);
+    return gplotSimpleXY1(NULL, na, outformat, outroot, title);
 }
 
 
@@ -589,8 +589,7 @@ gplotSimple2(NUMA        *na1,
              const char  *outroot,
              const char  *title)
 {
-    return gplotSimpleXY2(NULL, na1, na2, GPLOT_LINES,
-                          outformat, outroot, title);
+    return gplotSimpleXY2(NULL, na1, na2, outformat, outroot, title);
 }
 
 
@@ -618,7 +617,7 @@ gplotSimpleN(NUMAA       *naa,
              const char  *outroot,
              const char  *title)
 {
-    return gplotSimpleXYN(NULL, naa, GPLOT_LINES, outformat, outroot, title);
+    return gplotSimpleXYN(NULL, naa, outformat, outroot, title);
 }
 
 
@@ -627,8 +626,6 @@ gplotSimpleN(NUMAA       *naa,
  *
  *      Input:  nax (<optional>)
  *              nay
- *              plotstyle (GPLOT_LINES, GPLOT_POINTS, GPLOT_IMPULSES,
- *                         GPLOT_LINESPOINTS, GPLOT_DOTS)
  *              outformat (GPLOT_PNG, GPLOT_PS, GPLOT_EPS, GPLOT_X11,
  *                         GPLOT_LATEX)
  *              outroot (root of output files)
@@ -636,18 +633,16 @@ gplotSimpleN(NUMAA       *naa,
  *      Return: 0 if OK, 1 on error
  *
  *  Notes:
- *      (1) This gives a plot of a @nay vs @nax, generated in
+ *      (1) This gives a line plot of a @nay vs @nax, generated in
  *          the specified output format.  The title is optional.
- *      (2) Use 0 for default plotstyle (lines).
- *      (3) @nax is optional.  If NULL, @nay is plotted against
+ *      (2) @nax is optional.  If NULL, @nay is plotted against
  *          the array index.
- *      (4) When calling these simple plot functions more than once, use
+ *      (3) When calling these simple plot functions more than once, use
  *          different @outroot to avoid overwriting the output files.
  */
 l_int32
 gplotSimpleXY1(NUMA        *nax,
                NUMA        *nay,
-               l_int32      plotstyle,
                l_int32      outformat,
                const char  *outroot,
                const char  *title)
@@ -658,10 +653,6 @@ GPLOT  *gplot;
 
     if (!nay)
         return ERROR_INT("nay not defined", procName, 1);
-    if (plotstyle != GPLOT_LINES && plotstyle != GPLOT_POINTS &&
-        plotstyle != GPLOT_IMPULSES && plotstyle != GPLOT_LINESPOINTS &&
-        plotstyle != GPLOT_DOTS)
-        return ERROR_INT("invalid plotstyle", procName, 1);
     if (outformat != GPLOT_PNG && outformat != GPLOT_PS &&
         outformat != GPLOT_EPS && outformat != GPLOT_X11 &&
         outformat != GPLOT_LATEX)
@@ -671,7 +662,7 @@ GPLOT  *gplot;
 
     if ((gplot = gplotCreate(outroot, outformat, title, NULL, NULL)) == 0)
         return ERROR_INT("gplot not made", procName, 1);
-    gplotAddPlot(gplot, nax, nay, plotstyle, NULL);
+    gplotAddPlot(gplot, nax, nay, GPLOT_LINES, NULL);
     gplotMakeOutput(gplot);
     gplotDestroy(&gplot);
     return 0;
@@ -684,8 +675,6 @@ GPLOT  *gplot;
  *      Input:  nax (<optional; can be NULL)
  *              nay1
  *              nay2
- *              plotstyle (GPLOT_LINES, GPLOT_POINTS, GPLOT_IMPULSES,
- *                         GPLOT_LINESPOINTS, GPLOT_DOTS)
  *              outformat (GPLOT_PNG, GPLOT_PS, GPLOT_EPS, GPLOT_X11,
  *                         GPLOT_LATEX)
  *              outroot (root of output files)
@@ -693,19 +682,17 @@ GPLOT  *gplot;
  *      Return: 0 if OK, 1 on error
  *
  *  Notes:
- *      (1) This gives plots of @nay1 and @nay2 against nax, generated
+ *      (1) This gives line plots of @nay1 and @nay2 against nax, generated
  *          in the specified output format.  The title is optional.
- *      (2) Use 0 for default plotstyle (lines).
- *      (3) @nax is optional.  If NULL, @nay1 and @nay2 are plotted
+ *      (2) @nax is optional.  If NULL, @nay1 and @nay2 are plotted
  *          against the array index.
- *      (4) When calling these simple plot functions more than once, use
+ *      (3) When calling these simple plot functions more than once, use
  *          different @outroot to avoid overwriting the output files.
  */
 l_int32
 gplotSimpleXY2(NUMA        *nax,
                NUMA        *nay1,
                NUMA        *nay2,
-               l_int32      plotstyle,
                l_int32      outformat,
                const char  *outroot,
                const char  *title)
@@ -716,10 +703,6 @@ GPLOT  *gplot;
 
     if (!nay1 || !nay2)
         return ERROR_INT("nay1 and nay2 not both defined", procName, 1);
-    if (plotstyle != GPLOT_LINES && plotstyle != GPLOT_POINTS &&
-        plotstyle != GPLOT_IMPULSES && plotstyle != GPLOT_LINESPOINTS &&
-        plotstyle != GPLOT_DOTS)
-        return ERROR_INT("invalid plotstyle", procName, 1);
     if (outformat != GPLOT_PNG && outformat != GPLOT_PS &&
         outformat != GPLOT_EPS && outformat != GPLOT_X11 &&
         outformat != GPLOT_LATEX)
@@ -729,8 +712,8 @@ GPLOT  *gplot;
 
     if ((gplot = gplotCreate(outroot, outformat, title, NULL, NULL)) == 0)
         return ERROR_INT("gplot not made", procName, 1);
-    gplotAddPlot(gplot, nax, nay1, plotstyle, NULL);
-    gplotAddPlot(gplot, nax, nay2, plotstyle, NULL);
+    gplotAddPlot(gplot, nax, nay1, GPLOT_LINES, NULL);
+    gplotAddPlot(gplot, nax, nay2, GPLOT_LINES, NULL);
     gplotMakeOutput(gplot);
     gplotDestroy(&gplot);
     return 0;
@@ -742,8 +725,6 @@ GPLOT  *gplot;
  *
  *      Input:  nax (<optional>; can be NULL)
  *              naay (numaa of arrays to plot against @nax)
- *              plotstyle (GPLOT_LINES, GPLOT_POINTS, GPLOT_IMPULSES,
- *                         GPLOT_LINESPOINTS, GPLOT_DOTS)
  *              outformat (GPLOT_PNG, GPLOT_PS, GPLOT_EPS, GPLOT_X11,
  *                         GPLOT_LATEX)
  *              outroot (root of output files)
@@ -751,18 +732,16 @@ GPLOT  *gplot;
  *      Return: 0 if OK, 1 on error
  *
  *  Notes:
- *      (1) This gives plots of each Numa in @naa against nax,
+ *      (1) This gives line plots of each Numa in @naa against nax,
  *          generated in the specified output format.  The title is optional.
- *      (2) Use 0 for default plotstyle (lines).
- *      (3) @nax is optional.  If NULL, each Numa array is plotted against
+ *      (2) @nax is optional.  If NULL, each Numa array is plotted against
  *          the array index.
- *      (4) When calling these simple plot functions more than once, use
+ *      (3) When calling these simple plot functions more than once, use
  *          different @outroot to avoid overwriting the output files.
  */
 l_int32
 gplotSimpleXYN(NUMA        *nax,
                NUMAA       *naay,
-               l_int32      plotstyle,
                l_int32      outformat,
                const char  *outroot,
                const char  *title)
@@ -777,10 +756,6 @@ NUMA    *nay;
         return ERROR_INT("naay not defined", procName, 1);
     if ((n = numaaGetCount(naay)) == 0)
         return ERROR_INT("no numa in array", procName, 1);
-    if (plotstyle != GPLOT_LINES && plotstyle != GPLOT_POINTS &&
-        plotstyle != GPLOT_IMPULSES && plotstyle != GPLOT_LINESPOINTS &&
-        plotstyle != GPLOT_DOTS)
-        return ERROR_INT("invalid plotstyle", procName, 1);
     if (outformat != GPLOT_PNG && outformat != GPLOT_PS &&
         outformat != GPLOT_EPS && outformat != GPLOT_X11 &&
         outformat != GPLOT_LATEX)
@@ -792,7 +767,7 @@ NUMA    *nay;
         return ERROR_INT("gplot not made", procName, 1);
     for (i = 0; i < n; i++) {
         nay = numaaGetNuma(naay, i, L_CLONE);
-        gplotAddPlot(gplot, nax, nay, plotstyle, NULL);
+        gplotAddPlot(gplot, nax, nay, GPLOT_LINES, NULL);
         numaDestroy(&nay);
     }
     gplotMakeOutput(gplot);
@@ -854,10 +829,10 @@ GPLOT   *gplot;
         fclose(fp);
         return (GPLOT *)ERROR_PTR("gplot not made", procName, NULL);
     }
-    LEPT_FREE(rootname);
-    LEPT_FREE(title);
-    LEPT_FREE(xlabel);
-    LEPT_FREE(ylabel);
+    FREE(rootname);
+    FREE(title);
+    FREE(xlabel);
+    FREE(ylabel);
     sarrayDestroy(&gplot->cmddata);
     sarrayDestroy(&gplot->datanames);
     sarrayDestroy(&gplot->plotdata);

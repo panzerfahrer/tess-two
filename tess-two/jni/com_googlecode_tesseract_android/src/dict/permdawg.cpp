@@ -303,7 +303,7 @@ void Dict::append_choices(
  *
  * The given prev_char_frag_info contains:
  * - fragment: if not NULL contains information about immediately
- *   preceding fragmented character choice
+ *   preceeding fragmented character choice
  * - num_fragments: number of fragments that have been used so far
  *   to construct a character
  * - certainty: certainty of the current choice or minimum

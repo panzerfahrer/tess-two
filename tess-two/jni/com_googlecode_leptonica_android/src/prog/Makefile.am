@@ -95,26 +95,26 @@ OTHER_PROGS = adaptmaptest adaptmap_dark \
 	flipselgen fmorphautogen \
 	fpixcontours gammatest \
 	gifio_leaktest graphicstest graymorphtest \
-	hashtest histotest iotest italictest \
+	histotest iotest italictest \
 	jbcorrelation jbrankhaus jbwords \
 	lineremoval listtest \
 	livre_adapt livre_hmt \
 	livre_makefigs livre_orient \
 	livre_pageseg livre_seedgen livre_tophat \
-	maketile maptest misctest1 \
+	maketile misctest1 \
 	modifyhuesat morphtest1 mtifftest \
 	numaranktest otsutest1 otsutest2 \
 	pagesegtest1 pagesegtest2 \
-	partitiontest pdfiotest percolatetest \
+	partitiontest pdfiotest \
 	pixaatest plottest \
-	quadtreetest ranktest rbtreetest \
-	recog_bootnum recogsort recogtest1 \
+	quadtreetest ranktest \
+	recogsort recogtest1 \
 	reducetest removecmap \
 	renderfonts rotatefastalt \
 	rotateorthtest1 rotatetest1 \
 	runlengthtest scaleandtile \
 	scaletest1 scaletest2 \
-	seedfilltest settest sharptest \
+	seedfilltest sharptest \
 	sheartest showedges \
 	skewtest snapcolortest \
 	sorttest sudokutest trctest \

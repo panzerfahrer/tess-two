@@ -45,6 +45,11 @@ void (*zapper) (ELIST2_LINK *)) {
   ELIST2_LINK *ptr;
   ELIST2_LINK *next;
 
+  #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2::internal_clear", ABORT, NULL);
+  #endif
+
   if (!empty ()) {
     ptr = last->next;            //set to first
     last->next = NULL;           //break circle
@@ -76,6 +81,11 @@ void ELIST2::assign_to_sublist(                            //to this list
   const ERRCODE LIST_NOT_EMPTY =
     "Destination list must be empty before extracting a sublist";
 
+  #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2::assign_to_sublist", ABORT, NULL);
+  #endif
+
   if (!empty ())
     LIST_NOT_EMPTY.error ("ELIST2.assign_to_sublist", ABORT, NULL);
 
@@ -93,6 +103,11 @@ inT32 ELIST2::length() const {  // count elements
   ELIST2_ITERATOR it(const_cast<ELIST2*>(this));
   inT32 count = 0;
 
+  #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2::length", ABORT, NULL);
+  #endif
+
   for (it.mark_cycle_pt (); !it.cycled_list (); it.forward ())
     count++;
   return count;
@@ -103,7 +118,7 @@ inT32 ELIST2::length() const {  // count elements
  *							ELIST2::sort
  *
  *  Sort elements on list
- *  NB If you don't like the const declarations in the comparator, coerce yours:
+ *  NB If you dont like the const declarations in the comparator, coerce yours:
  *   ( int (*)(const void *, const void *)
  **********************************************************************/
 
@@ -116,6 +131,11 @@ const void *, const void *)) {
   ELIST2_LINK **base;            //ptr array to sort
   ELIST2_LINK **current;
   inT32 i;
+
+  #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2::sort", ABORT, NULL);
+  #endif
 
   /* Allocate an array of pointers, one per list element */
   count = length ();
@@ -142,7 +162,7 @@ const void *, const void *)) {
 
 // Assuming list has been sorted already, insert new_link to
 // keep the list sorted according to the same comparison function.
-// Comparison function is the same as used by sort, i.e. uses double
+// Comparision function is the same as used by sort, i.e. uses double
 // indirection. Time is O(1) to add to beginning or end.
 // Time is linear to add pre-sorted items to an empty list.
 void ELIST2::add_sorted(int comparator(const void*, const void*),
@@ -188,6 +208,8 @@ void ELIST2::add_sorted(int comparator(const void*, const void*),
 
 ELIST2_LINK *ELIST2_ITERATOR::forward() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::forward", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::forward", ABORT, NULL);
   #endif
@@ -228,6 +250,8 @@ ELIST2_LINK *ELIST2_ITERATOR::forward() {
 
 ELIST2_LINK *ELIST2_ITERATOR::backward() {
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::backward", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::backward", ABORT, NULL);
   #endif
@@ -270,6 +294,8 @@ ELIST2_LINK *ELIST2_ITERATOR::data_relative(                //get data + or - ..
   ELIST2_LINK *ptr;
 
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::data_relative", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::data_relative", ABORT, NULL);
   if (list->empty ())
@@ -308,6 +334,8 @@ void ELIST2_ITERATOR::exchange(                              //positions of 2 li
   ELIST2_LINK *old_current;
 
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::exchange", ABORT, NULL);
   if (!list)
     NO_LIST.error ("ELIST2_ITERATOR::exchange", ABORT, NULL);
   if (!other_it)
@@ -424,6 +452,8 @@ ELIST2_LINK *ELIST2_ITERATOR::extract_sublist(                              //fr
   ELIST2_LINK *end_of_new_list;
 
   #ifndef NDEBUG
+  if (!this)
+    NULL_OBJECT.error ("ELIST2_ITERATOR::extract_sublist", ABORT, NULL);
   if (!other_it)
     BAD_PARAMETER.error ("ELIST2_ITERATOR::extract_sublist", ABORT,
       "other_it NULL");
@@ -445,7 +475,7 @@ ELIST2_LINK *ELIST2_ITERATOR::extract_sublist(                              //fr
 
   temp_it.mark_cycle_pt ();
   do {                           //walk sublist
-    if (temp_it.cycled_list ())  //can't find end pt
+    if (temp_it.cycled_list ())  //cant find end pt
       BAD_SUBLIST.error ("ELIST2_ITERATOR.extract_sublist", ABORT, NULL);
 
     if (temp_it.at_last ()) {

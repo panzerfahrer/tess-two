@@ -26,12 +26,6 @@
 
 /*
  *   misctest1.c
- *        * Combine two grayscale images using a mask
- *        * Combine two binary images using a mask
- *        * Do a restricted seedfill
- *        * Colorize a grayscale image
- *        * Convert color to gray
- *        * Extract text lines
  */
 
 #include "allheaders.h"
@@ -43,12 +37,11 @@ int main(int    argc,
 {
 l_int32   w, h;
 BOXA     *boxa;
-PIX      *pixs, *pix1, *pix2, *pixg, *pixb, *pixd, *pixc;
+PIX      *pixs, *pixt1, *pixt2, *pixg, *pixb, *pixd, *pixc;
 PIX      *pixm, *pixm2, *pixd2, *pixs2;
 PIXA     *pixa, *pixac;
 PIXCMAP  *cmap, *cmapg;
 
-    lept_mkdir("lept/misc");
     pixac = pixaCreate(0);
 
         /* Combine two grayscale images using a mask */
@@ -68,14 +61,14 @@ PIXCMAP  *cmap, *cmapg;
 
         /* Combine two binary images using a mask */
     pixm2 = pixExpandBinaryReplicate(pixm, 2);
-    pix1 = pixCopy(NULL, pixd);
+    pixt1 = pixCopy(NULL, pixd);
     pixCombineMaskedGeneral(pixd, pixs, pixm2, 200, 200);
     pixSaveTiled(pixd, pixac, 0.25, 0, 40, 0);
     pixDisplayWithTitle(pixd, 700, 100, NULL, SHOW);
-    pixCombineMasked(pix1, pixs, pixm2);
-    pixSaveTiled(pix1, pixac, 0.25, 0, 40, 0);
+    pixCombineMasked(pixt1, pixs, pixm2);
+    pixSaveTiled(pixt1, pixac, 0.25, 0, 40, 0);
     pixDestroy(&pixd);
-    pixDestroy(&pix1);
+    pixDestroy(&pixt1);
     pixDestroy(&pixs);
     pixDestroy(&pixm);
     pixDestroy(&pixm2);
@@ -113,10 +106,10 @@ PIXCMAP  *cmap, *cmapg;
     pixs = pixRead("weasel4.16c.png");
     pixSaveTiled(pixs, pixac, 1.0, 1, 20, 0);
     pixc = pixConvertTo32(pixs);
-    pix1 = pixConvertRGBToGray(pixc, 3., 7., 5.);
-    pixSaveTiled(pix1, pixac, 1.0, 0, 20, 0);
-    pix2 = pixConvertRGBToGrayFast(pixc);
-    pixSaveTiled(pix2, pixac, 1.0, 0, 20, 0);
+    pixt1 = pixConvertRGBToGray(pixc, 3., 7., 5.);
+    pixSaveTiled(pixt1, pixac, 1.0, 0, 20, 0);
+    pixt2 = pixConvertRGBToGrayFast(pixc);
+    pixSaveTiled(pixt2, pixac, 1.0, 0, 20, 0);
     pixg = pixCopy(NULL, pixs);
     cmap = pixGetColormap(pixs);
     cmapg = pixcmapColorToGray(cmap, 4., 6., 3.);
@@ -124,8 +117,8 @@ PIXCMAP  *cmap, *cmapg;
     pixSaveTiled(pixg, pixac, 1.0, 0, 20, 0);
     pixDestroy(&pixs);
     pixDestroy(&pixc);
-    pixDestroy(&pix1);
-    pixDestroy(&pix2);
+    pixDestroy(&pixt1);
+    pixDestroy(&pixt2);
     pixDestroy(&pixg);
 
     pixd = pixaDisplay(pixac, 0, 0);
@@ -133,20 +126,6 @@ PIXCMAP  *cmap, *cmapg;
     pixWrite("/tmp/misc1.png", pixd, IFF_PNG);
     pixDestroy(&pixd);
     pixaDestroy(&pixac);
-
-        /* Extract text lines */
-    pix1 = pixRead("feyn.tif");
-    pixa = pixExtractTextlines(pix1, 150, 150, 10, 5);
-    boxa = pixaGetBoxa(pixa, L_CLONE);
-    boxaWrite("/tmp/lept/misc/lines.ba", boxa);
-    pix2 = pixaDisplayRandomCmap(pixa, 0, 0);
-    pixDisplay(pix2, 400, 0);
-    pixWrite("/tmp/lept/misc/lines.png", pix2, IFF_PNG);
-    boxaDestroy(&boxa);
-    pixDestroy(&pix1);
-    pixDestroy(&pix2);
-    pixaDestroy(&pixa);
-
     return 0;
 }
 

@@ -63,9 +63,6 @@
  *    Make a frame mask
  *           PIX        *pixMakeFrameMask()
  *
- *    Fraction of Fg pixels under a mask
- *           l_int32     pixFractionFgInMask()
- *
  *    Clip to foreground
  *           PIX        *pixClipToForeground()
  *           l_int32     pixTestClipToForeground()
@@ -195,7 +192,7 @@ PIX      *pixt;
     pixCountPixels(pixt, &nfg, tab8);
     if (nfg == 0) {
         pixDestroy(&pixt);
-        if (!tab) LEPT_FREE(tab8);
+        if (!tab) FREE(tab8);
         return 0;
     }
     pixXor(pixt, pixt, pixs);
@@ -203,7 +200,7 @@ PIX      *pixt;
     *pfract = (l_float32)nfg / (l_float32)nbound;
     pixDestroy(&pixt);
 
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     return 0;
 }
 
@@ -241,7 +238,7 @@ PIX       *pixt;
         numaAddNumber(na, fract);
         pixDestroy(&pixt);
     }
-    LEPT_FREE(tab);
+    FREE(tab);
     return na;
 }
 
@@ -290,7 +287,7 @@ PIX      *pixt;
 
     pixCountPixels(pixs, &nfg, tab8);
     if (nfg == 0) {
-        if (!tab) LEPT_FREE(tab8);
+        if (!tab) FREE(tab8);
         return 0;
     }
     pixt = pixErodeBrick(NULL, pixs, 3, 3);
@@ -299,7 +296,7 @@ PIX      *pixt;
     *pfract = (l_float32)nbound / (l_float32)nfg;
     pixDestroy(&pixt);
 
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     return 0;
 }
 
@@ -341,7 +338,7 @@ PIX       *pixt;
         numaAddNumber(na, ratio);
         pixDestroy(&pixt);
     }
-    LEPT_FREE(tab);
+    FREE(tab);
     return na;
 }
 
@@ -395,7 +392,7 @@ PIX      *pixt;
     *pratio = (0.5 * nbound) / (l_float32)(w + h);
     pixDestroy(&pixt);
 
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     return 0;
 }
 
@@ -433,7 +430,7 @@ PIX       *pixt;
         numaAddNumber(na, fract);
         pixDestroy(&pixt);
     }
-    LEPT_FREE(tab);
+    FREE(tab);
     return na;
 }
 
@@ -475,7 +472,7 @@ l_int32  *tab8;
     pixCountPixels(pixs, &sum, tab8);
     *pfract = (l_float32)sum / (l_float32)(w * h);
 
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     return 0;
 }
 
@@ -530,7 +527,7 @@ PIX       *pix;
         boxDestroy(&box);
         pixDestroy(&pix);
     }
-    LEPT_FREE(tab);
+    FREE(tab);
 
     if (debug) {
         l_int32  w, h;
@@ -609,13 +606,13 @@ PIX      *pix1;
     pixCountPixels(pixs, &sum, tab8);
     if (sum == 0) {
         pixDestroy(&pix1);
-        if (!tab) LEPT_FREE(tab8);
+        if (!tab) FREE(tab8);
         return 0;
     }
     pixCountPixels(pix1, &masksum, tab8);
     *pfract = (l_float32)masksum / (l_float32)sum;
 
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     pixDestroy(&pix1);
     return 0;
 }
@@ -741,7 +738,7 @@ PIX      *pixt;
     pixCopy(pixt, pixs1);
     pixRasterop(pixt, x2, y2, w, h, PIX_PAINT, pixs2, 0, 0);  /* OR */
     pixCountPixels(pixt, &nunion, tab8);
-    if (!tab) LEPT_FREE(tab8);
+    if (!tab) FREE(tab8);
     pixDestroy(&pixt);
 
     if (nunion > 0)
@@ -1259,12 +1256,11 @@ PIX     *pixd;
  *      (1) This makes an arbitrary 1-component mask with a centered frame.
  *          Input fractions are in [0.0 ... 1.0]; hf1 <= hf2 and vf1 <= vf2.
  *          Horizontal and vertical frame widths are independently specified.
- *      (2) Special case: to get a full fg mask, set all input values to 0.0.
+ *      (2) A full fg mask would have all input values 0.0.
  *          An empty fg mask has hf1 = vf1 = 1.0.
  *          A fg rectangle with no hole has hf2 == 1.0 or hv2 == 1.0.
- *      (3) The vertical thickness of the horizontal mask parts
- *          is 0.5 * (vf2 - vf1) * h.  The horizontal thickness of the
- *          vertical mask parts is 0.5 * (hf2 - hf1) * w.
+ *      (3) The width of the horizontal mask parts is 2 * (vf2 - vf1) * h.
+ *          The width of the vertical mask parts is 2 * (hf2 - hf1) * w.
  */
 PIX *
 pixMakeFrameMask(l_int32    w,
@@ -1308,71 +1304,6 @@ PIX     *pixd;
     if (hf2 < 1.0 && vf2 < 1.0)
         pixRasterop(pixd, h2, v2, w - 2 * h2, h - 2 * v2, PIX_CLR, NULL, 0, 0);
     return pixd;
-}
-
-
-/*---------------------------------------------------------------------*
- *                 Fraction of Fg pixels under a mask                  *
- *---------------------------------------------------------------------*/
-/*!
- *  pixFractionFgInMask()
- *
- *      Input:  pix1 (1 bpp)
- *              pix2 (1 bpp)
- *              &fract (<return> fraction of fg pixels in 1 that are
- *                      aligned with the fg of 2)
- *      Return: 0 if OK, 1 on error.
- *
- *  Notes:
- *      (1) This gives the fraction of fg pixels in pix1 that are in
- *          the intersection (i.e., under the fg) of pix2:
- *          |1 & 2|/|1|, where |...| means the number of fg pixels.
- *          Note that this is different from the situation where
- *          pix1 and pix2 are reversed.
- *      (2) Both pix1 and pix2 are registered to the UL corners.  A warning
- *          is issued if pix1 and pix2 have different sizes.
- *      (3) This can also be used to find the fraction of fg pixels in pix1
- *          that are NOT under the fg of pix2: 1.0 - |1 & 2|/|1|
- *      (4) If pix1 or pix2 are empty, this returns @fract = 0.0.
- *      (5) For example, pix2 could be a frame around the outside of the
- *          image, made from pixMakeFrameMask().
- */
-l_int32
-pixFractionFgInMask(PIX        *pix1,
-                    PIX        *pix2,
-                    l_float32  *pfract)
-{
-l_int32  w1, h1, w2, h2, empty, count1, count3;
-PIX     *pix3;
-
-    PROCNAME("pixFractionFgInMask");
-
-    if (!pfract)
-        return ERROR_INT("&fract not defined", procName, 1);
-    *pfract = 0.0;
-    if (!pix1 || pixGetDepth(pix1) != 1)
-        return ERROR_INT("pix1 not defined or not 1 bpp", procName, 1);
-    if (!pix2 || pixGetDepth(pix2) != 1)
-        return ERROR_INT("pix2 not defined or not 1 bpp", procName, 1);
-
-    pixGetDimensions(pix1, &w1, &h1, NULL);
-    pixGetDimensions(pix2, &w2, &h2, NULL);
-    if (w1 != w2 || h1 != h2) {
-        L_INFO("sizes unequal: (w1,w2) = (%d,%d), (h1,h2) = (%d,%d)\n",
-               procName, w1, w2, h1, h2);
-    }
-    pixZero(pix1, &empty);
-    if (empty) return 0;
-    pixZero(pix2, &empty);
-    if (empty) return 0;
-
-    pix3 = pixCopy(NULL, pix1);
-    pixAnd(pix3, pix3, pix2);
-    pixCountPixels(pix1, &count1, NULL);  /* |1| */
-    pixCountPixels(pix3, &count3, NULL);  /* |1 & 2| */
-    *pfract = (l_float32)count3 / (l_float32)count1;
-    pixDestroy(&pix3);
-    return 0;
 }
 
 
@@ -2797,7 +2728,7 @@ PIX       *pixd;
         }
     }
 
-    LEPT_FREE(lines8);
-    LEPT_FREE(lined8);
+    FREE(lines8);
+    FREE(lined8);
     return pixd;
 }

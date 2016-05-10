@@ -27,13 +27,6 @@
 /*
  *  tiffio.c
  *
- *     TIFFClientOpen() wrappers for FILE*:
- *      static tsize_t    lept_read_proc()
- *      static tsize_t    lept_write_proc()
- *      static toff_t     lept_seek_proc()
- *      static int        lept_close_proc()
- *      static toff_t     lept_size_proc()
- *
  *     Reading tiff:
  *             PIX       *pixReadTiff()    [ special top level ]
  *             PIX       *pixReadStreamTiff()
@@ -82,10 +75,6 @@
  *         (or later)
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config_auto.h"
-#endif  /* HAVE_CONFIG_H */
-
 #include <string.h>
 #include <sys/types.h>
 #ifndef _MSC_VER
@@ -95,6 +84,10 @@
 #endif  /* _MSC_VER */
 #include <fcntl.h>
 #include "allheaders.h"
+
+#ifdef HAVE_CONFIG_H
+#include "config_auto.h"
+#endif  /* HAVE_CONFIG_H */
 
 /* --------------------------------------------*/
 #if  HAVE_LIBTIFF   /* defined in environ.h */
@@ -344,9 +337,6 @@ lept_size_proc(thandle_t  cookie)
  *  Notes:
  *      (1) This is a version of pixRead(), specialized for tiff
  *          files, that allows specification of the page to be returned
- *      (2) No warning messages on failure, because of how multi-page
- *          TIFF reading works. You are supposed to keep trying until
- *          it stops working.
  */
 PIX *
 pixReadTiff(const char  *filename,
@@ -362,8 +352,12 @@ PIX   *pix;
 
     if ((fp = fopenReadStream(filename)) == NULL)
         return (PIX *)ERROR_PTR("image file not found", procName, NULL);
-    pix = pixReadStreamTiff(fp, n);
+    if ((pix = pixReadStreamTiff(fp, n)) == NULL) {
+        fclose(fp);
+        return (PIX *)ERROR_PTR("pix not read", procName, NULL);
+    }
     fclose(fp);
+
     return pix;
 }
 
@@ -377,17 +371,12 @@ PIX   *pix;
  *      Input:  stream
  *              n (page number: 0 based)
  *      Return: pix, or null on error (e.g., if the page number is invalid)
- *
- *  Notes:
- *      (1) No warning messages on failure, because of how multi-page
- *          TIFF reading works. You are supposed to keep trying until
- *          it stops working.
  */
 PIX *
 pixReadStreamTiff(FILE    *fp,
                   l_int32  n)
 {
-l_int32  i;
+l_int32  i, pagefound;
 PIX     *pix;
 TIFF    *tif;
 
@@ -399,18 +388,26 @@ TIFF    *tif;
     if ((tif = fopenTiff(fp, "r")) == NULL)
         return (PIX *)ERROR_PTR("tif not opened", procName, NULL);
 
+    pagefound = FALSE;
     pix = NULL;
     for (i = 0; i < MAX_PAGES_IN_TIFF_FILE; i++) {
         TIFFSetDirectory(tif, i);
         if (i == n) {
+            pagefound = TRUE;
             if ((pix = pixReadFromTiffStream(tif)) == NULL) {
                 TIFFCleanup(tif);
-                return NULL;
+                return (PIX *)ERROR_PTR("pix not read", procName, NULL);
             }
             break;
         }
         if (TIFFReadDirectory(tif) == 0)
             break;
+    }
+
+    if (pagefound == FALSE) {
+        L_ERROR("tiff page %d not found\n", procName, n);
+        TIFFCleanup(tif);
+        return NULL;
     }
 
     TIFFCleanup(tif);
@@ -453,11 +450,11 @@ static PIX *
 pixReadFromTiffStream(TIFF  *tif)
 {
 l_uint8   *linebuf, *data;
-l_uint16   spp, bps, bpp, photometry, tiffcomp, orientation;
+l_uint16   spp, bps, bpp, tiffbpl, photometry, tiffcomp, orientation;
 l_uint16  *redmap, *greenmap, *bluemap;
 l_int32    d, wpl, bpl, comptype, i, j, ncolors, rval, gval, bval;
 l_int32    xres, yres;
-l_uint32   w, h, tiffbpl, tiffword;
+l_uint32   w, h, tiffword;
 l_uint32  *line, *ppixel, *tiffdata;
 l_uint32   read_oriented;
 PIX       *pix;
@@ -490,20 +487,18 @@ PIXCMAP   *cmap;
 
     if ((pix = pixCreate(w, h, d)) == NULL)
         return (PIX *)ERROR_PTR("pix not made", procName, NULL);
-    pixSetInputFormat(pix, IFF_TIFF);
     data = (l_uint8 *)pixGetData(pix);
     wpl = pixGetWpl(pix);
     bpl = 4 * wpl;
 
         /* Read the data */
     if (spp == 1) {
-        if ((linebuf = (l_uint8 *)LEPT_CALLOC(tiffbpl + 1, sizeof(l_uint8)))
-            == NULL)
+        if ((linebuf = (l_uint8 *)CALLOC(tiffbpl + 1, sizeof(l_uint8))) == NULL)
             return (PIX *)ERROR_PTR("calloc fail for linebuf", procName, NULL);
 
         for (i = 0 ; i < h ; i++) {
             if (TIFFReadScanline(tif, linebuf, i, 0) < 0) {
-                LEPT_FREE(linebuf);
+                FREE(linebuf);
                 pixDestroy(&pix);
                 return (PIX *)ERROR_PTR("line read fail", procName, NULL);
             }
@@ -514,18 +509,17 @@ PIXCMAP   *cmap;
             pixEndianByteSwap(pix);
         else   /* bps == 16 */
             pixEndianTwoByteSwap(pix);
-        LEPT_FREE(linebuf);
+        FREE(linebuf);
     }
     else {  /* rgb */
-        if ((tiffdata = (l_uint32 *)LEPT_CALLOC(w * h, sizeof(l_uint32)))
-            == NULL) {
+        if ((tiffdata = (l_uint32 *)CALLOC(w * h, sizeof(l_uint32))) == NULL) {
             pixDestroy(&pix);
             return (PIX *)ERROR_PTR("calloc fail for tiffdata", procName, NULL);
         }
             /* TIFFReadRGBAImageOriented() converts to 8 bps */
         if (!TIFFReadRGBAImageOriented(tif, w, h, (uint32 *)tiffdata,
                                        ORIENTATION_TOPLEFT, 0)) {
-            LEPT_FREE(tiffdata);
+            FREE(tiffdata);
             pixDestroy(&pix);
             return (PIX *)ERROR_PTR("failed to read tiffdata", procName, NULL);
         } else {
@@ -544,7 +538,7 @@ PIXCMAP   *cmap;
                 ppixel++;
             }
         }
-        LEPT_FREE(tiffdata);
+        FREE(tiffdata);
     }
 
     if (getTiffStreamResolution(tif, &xres, &yres) == 0) {
@@ -879,9 +873,9 @@ char      *text;
         }
         for (i = ncolors; i < cmapsize; i++)  /* init, even though not used */
             redmap[i] = greenmap[i] = bluemap[i] = 0;
-        LEPT_FREE(rmap);
-        LEPT_FREE(gmap);
-        LEPT_FREE(bmap);
+        FREE(rmap);
+        FREE(gmap);
+        FREE(bmap);
 
         TIFFSetField(tif, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_PALETTE);
         TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, (l_uint16)1);
@@ -923,7 +917,7 @@ char      *text;
     bpl = 4 * wpl;
     if (tiffbpl > bpl)
         fprintf(stderr, "Big trouble: tiffbpl = %d, bpl = %d\n", tiffbpl, bpl);
-    if ((linebuf = (l_uint8 *)LEPT_CALLOC(1, bpl)) == NULL)
+    if ((linebuf = (l_uint8 *)CALLOC(1, bpl)) == NULL)
         return ERROR_INT("calloc fail for linebuf", procName, 1);
 
         /* Use single strip for image */
@@ -962,7 +956,7 @@ char      *text;
     }
 
 /*    TIFFWriteDirectory(tif); */
-    LEPT_FREE(linebuf);
+    FREE(linebuf);
 
     return 0;
 }
@@ -1026,8 +1020,8 @@ l_uint32   uval, uval2;
             return ERROR_INT("too many 4-arg tag calls", procName, 1);
         for (i = 0; i < ns; i++) {
             numaGetIValue(natags, i, &tagval);
-            sval = sarrayGetString(savals, i, L_NOCOPY);
-            type = sarrayGetString(satypes, i, L_NOCOPY);
+            sval = sarrayGetString(savals, i, 0);
+            type = sarrayGetString(satypes, i, 0);
             numaGetIValue(nasizes, i, &size);
             if (strcmp(type, "char*") && strcmp(type, "l_uint8*"))
                 L_WARNING("array type not char* or l_uint8*; ignore\n",
@@ -1041,8 +1035,8 @@ l_uint32   uval, uval2;
         /* The typical tags (3 args to TIFFSetField) are now written */
     for (i = ns; i < n; i++) {
         numaGetIValue(natags, i, &tagval);
-        sval = sarrayGetString(savals, i, L_NOCOPY);
-        type = sarrayGetString(satypes, i, L_NOCOPY);
+        sval = sarrayGetString(savals, i, 0);
+        type = sarrayGetString(satypes, i, 0);
         if (!strcmp(type, "char*")) {
             TIFFSetField(tif, tagval, sval);
         } else if (!strcmp(type, "l_uint16")) {
@@ -1785,7 +1779,7 @@ TIFF     *tif;
         return ERROR_INT("tif not open for read", procName, 1);
     TIFFGetField(tif, TIFFTAG_COMPRESSION, &comptype);
     if (comptype != COMPRESSION_CCITTFAX4) {
-        LEPT_FREE(inarray);
+        FREE(inarray);
         TIFFClose(tif);
         return ERROR_INT("filein is not g4 compressed", procName, 1);
     }
@@ -1820,13 +1814,13 @@ TIFF     *tif;
          * up to the beginning of the directory (at diroff)  */
     nbytes = diroff - 8;
     *pnbytes = nbytes;
-    if ((data = (l_uint8 *)LEPT_CALLOC(nbytes, sizeof(l_uint8))) == NULL) {
-        LEPT_FREE(inarray);
+    if ((data = (l_uint8 *)CALLOC(nbytes, sizeof(l_uint8))) == NULL) {
+        FREE(inarray);
         return ERROR_INT("data not allocated", procName, 1);
     }
     *pdata = data;
     memcpy(data, inarray + 8, nbytes);
-    LEPT_FREE(inarray);
+    FREE(inarray);
 
     return 0;
 }
@@ -1900,7 +1894,7 @@ TIFF  *tif;
 
     fname = genPathname(filename, NULL);
     tif = TIFFOpen(fname, modestring);
-    LEPT_FREE(fname);
+    FREE(fname);
     return tif;
 }
 
@@ -1971,7 +1965,7 @@ memstreamCreateForRead(l_uint8  *indata,
 {
 L_MEMSTREAM  *mstream;
 
-    mstream = (L_MEMSTREAM *)LEPT_CALLOC(1, sizeof(L_MEMSTREAM));
+    mstream = (L_MEMSTREAM *)CALLOC(1, sizeof(L_MEMSTREAM));
     mstream->buffer = indata;   /* handle to input data array */
     mstream->bufsize = insize;  /* amount of input data */
     mstream->hw = insize;       /* high-water mark fixed at input data size */
@@ -1986,8 +1980,8 @@ memstreamCreateForWrite(l_uint8  **poutdata,
 {
 L_MEMSTREAM  *mstream;
 
-    mstream = (L_MEMSTREAM *)LEPT_CALLOC(1, sizeof(L_MEMSTREAM));
-    mstream->buffer = (l_uint8 *)LEPT_CALLOC(8 * 1024, 1);
+    mstream = (L_MEMSTREAM *)CALLOC(1, sizeof(L_MEMSTREAM));
+    mstream->buffer = (l_uint8 *)CALLOC(8 * 1024, 1);
     mstream->bufsize = 8 * 1024;
     mstream->poutdata = poutdata;  /* used only at end of write */
     mstream->poutsize = poutsize;  /* ditto  */
@@ -2006,14 +2000,6 @@ size_t        amount;
 
     mstream = (L_MEMSTREAM *)handle;
     amount = L_MIN((size_t)length, mstream->hw - mstream->offset);
-
-        /* Fuzzed files can create this condition! */
-    if (mstream->offset + amount > mstream->hw) {
-        fprintf(stderr, "Bad file: amount too big: %lu\n",
-                (unsigned long)amount);
-        return 0;
-    }
-
     memcpy(data, mstream->buffer + mstream->offset, amount);
     mstream->offset += amount;
     return amount;
@@ -2089,7 +2075,7 @@ L_MEMSTREAM  *mstream;
         *mstream->poutdata = mstream->buffer;
         *mstream->poutsize = mstream->hw;
     }
-    LEPT_FREE(mstream);  /* never free the buffer! */
+    FREE(mstream);  /* never free the buffer! */
     return 0;
 }
 
@@ -2189,9 +2175,6 @@ L_MEMSTREAM  *mstream;
  *      (1) This is a version of pixReadTiff(), where the data is read
  *          from a memory buffer and uncompressed.
  *      (2) Use TIFFClose(); TIFFCleanup() doesn't free internal memstream.
- *      (3) No warning messages on failure, because of how multi-page
- *          TIFF reading works. You are supposed to keep trying until
- *          it stops working.
  */
 PIX *
 pixReadMemTiff(const l_uint8  *cdata,
@@ -2199,7 +2182,7 @@ pixReadMemTiff(const l_uint8  *cdata,
                l_int32         n)
 {
 l_uint8  *data;
-l_int32   i;
+l_int32   i, pagefound;
 PIX      *pix;
 TIFF     *tif;
 
@@ -2212,12 +2195,14 @@ TIFF     *tif;
     if ((tif = fopenTiffMemstream("tifferror", "r", &data, &size)) == NULL)
         return (PIX *)ERROR_PTR("tiff stream not opened", procName, NULL);
 
+    pagefound = FALSE;
     pix = NULL;
     for (i = 0; i < MAX_PAGES_IN_TIFF_FILE; i++) {
         if (i == n) {
+            pagefound = TRUE;
             if ((pix = pixReadFromTiffStream(tif)) == NULL) {
                 TIFFClose(tif);
-                return NULL;
+                return (PIX *)ERROR_PTR("pix not read", procName, NULL);
             }
             pixSetInputFormat(pix, IFF_TIFF);
             break;
@@ -2225,6 +2210,9 @@ TIFF     *tif;
         if (TIFFReadDirectory(tif) == 0)
             break;
     }
+
+    if (pagefound == FALSE)
+        L_WARNING("tiff page %d not found\n", procName, n);
 
     TIFFClose(tif);
     return pix;

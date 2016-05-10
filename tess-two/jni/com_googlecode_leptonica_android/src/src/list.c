@@ -247,7 +247,7 @@ DLLIST  *elem, *next, *head;
         if (elem->data)
             L_WARNING("list data ptr is not null\n", procName);
         next = elem->next;
-        LEPT_FREE(elem);
+        FREE(elem);
     }
     *phead = NULL;
     return;
@@ -281,7 +281,7 @@ DLLIST  *cell, *head;
     if (!data)
         return ERROR_INT("data not defined", procName, 1);
 
-    if ((cell = (DLLIST *)LEPT_CALLOC(1, sizeof(DLLIST))) == NULL)
+    if ((cell = (DLLIST *)CALLOC(1, sizeof(DLLIST))) == NULL)
         return ERROR_INT("cell not made", procName, 1);
     cell->data = data;
 
@@ -336,7 +336,7 @@ DLLIST  *cell, *head, *tail;
     if (!data)
         return ERROR_INT("data not defined", procName, 1);
 
-    if ((cell = (DLLIST *)LEPT_CALLOC(1, sizeof(DLLIST))) == NULL)
+    if ((cell = (DLLIST *)CALLOC(1, sizeof(DLLIST))) == NULL)
         return ERROR_INT("cell not made", procName, 1);
     cell->data = data;
 
@@ -397,7 +397,7 @@ DLLIST  *cell, *head;
         return ERROR_INT("head and elem not consistent", procName, 1);
 
         /* New cell to insert */
-    if ((cell = (DLLIST *)LEPT_CALLOC(1, sizeof(DLLIST))) == NULL)
+    if ((cell = (DLLIST *)CALLOC(1, sizeof(DLLIST))) == NULL)
         return ERROR_INT("cell not made", procName, 1);
     cell->data = data;
 
@@ -458,7 +458,7 @@ DLLIST  *cell, *head;
         return ERROR_INT("head and elem not consistent", procName, 1);
 
         /* New cell to insert */
-    if ((cell = (DLLIST *)LEPT_CALLOC(1, sizeof(DLLIST))) == NULL)
+    if ((cell = (DLLIST *)CALLOC(1, sizeof(DLLIST))) == NULL)
         return ERROR_INT("cell not made", procName, 1);
     cell->data = data;
 
@@ -526,7 +526,7 @@ DLLIST  *head;
         elem->prev->next = elem->next;
     }
 
-    LEPT_FREE(elem);
+    FREE(elem);
     return data;
 }
 
@@ -564,7 +564,7 @@ void    *data;
     }
 
     data = head->data;
-    LEPT_FREE(head);
+    FREE(head);
     return data;
 }
 
@@ -616,7 +616,7 @@ void    *data;
     }
 
     data = tail->data;
-    LEPT_FREE(tail);
+    FREE(tail);
     return data;
 }
 
