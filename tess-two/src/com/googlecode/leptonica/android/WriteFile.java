@@ -25,7 +25,6 @@ import java.io.File;
  */
 public class WriteFile {
     static {
-        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -75,7 +74,7 @@ public class WriteFile {
 
     /**
      * Writes a Pix to file using the file extension as the output format;
-     * supported formats are .bmp and .png.
+     * supported formats are .bmp, .jpg, and .png.
      * <p>
      * Notes:
      * <ol>
