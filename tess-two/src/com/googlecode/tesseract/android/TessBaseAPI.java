@@ -196,46 +196,6 @@ public class TessBaseAPI {
         }
 
         /**
-         * Return the left bound of the word currently being recognized.
-         * Uses Tesseract coordinate system, with origin in the bottom left. 
-         * @deprecated Use {@link #getCurrentWordRect()} instead.
-         */
-        @Deprecated
-        public int getBoundingBoxLeft() {
-            return wordRect.left;
-        }
-
-        /**
-         * Return the right bound of the word currently being recognized.
-         * Uses Tesseract coordinate system, with origin in the bottom left. 
-         * @deprecated Use {@link #getCurrentWordRect()} instead.
-         */
-        @Deprecated
-        public int getBoundingBoxRight() { 
-            return wordRect.right;
-        }
-
-        /**
-         * Return the top bound of the word currently being recognized.
-         * Uses Tesseract coordinate system, with origin in the bottom left. 
-         * @deprecated Use {@link #getCurrentWordRect()} instead.
-         */
-        @Deprecated
-        public int getBoundingBoxTop() {
-            return textRect.bottom - wordRect.top;
-        }
-
-        /**
-         * Return the bottom bound of the word currently being recognized.
-         * Uses Tesseract coordinate system, with origin in the bottom left. 
-         * @deprecated Use {@link #getCurrentWordRect()} instead.
-         */
-        @Deprecated
-        public int getBoundingBoxBottom() {
-            return textRect.bottom - wordRect.bottom;
-        }
-
-        /**
          * Return the bounds of the current recognition region. May match the 
          * bounds of the entire image or a sub-rectangle of the entire image.
          * 
@@ -801,11 +761,6 @@ public class TessBaseAPI {
         nativeReadConfigFile(filename);
     }
 
-    /** @deprecated use {@link #readConfigFile(String)} instead. */
-    @Deprecated public void ReadConfigFile(String filename) {
-        readConfigFile(filename);
-    }
-
     /**
      * The recognized text is returned as coded in the same format as a UTF8 
      * box file used in training.
@@ -819,6 +774,13 @@ public class TessBaseAPI {
             throw new IllegalStateException();
 
         return nativeGetBoxText(page);
+    }
+
+    /**
+     * Returns the version identifier as a string.
+     */
+    public String getVersion() {
+        return nativeGetVersion();
     }
 
     /**
@@ -977,6 +939,8 @@ public class TessBaseAPI {
     private native void nativeSetOutputName(String name);
 
     private native void nativeReadConfigFile(String fileName);
+
+    private native String nativeGetVersion();
 
     private native void nativeStop();
 
