@@ -21,8 +21,11 @@ package com.googlecode.leptonica.android;
  *
  * @author alanv@google.com (Alan Viverette)
  */
+@SuppressWarnings("WeakerAccess")
 public class Skew {
     static {
+        System.loadLibrary("jpgt");
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 

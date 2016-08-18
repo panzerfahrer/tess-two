@@ -24,8 +24,11 @@ import android.util.Log;
  *
  * @author renard
  */
+@SuppressWarnings("WeakerAccess")
 public class Boxa {
     static {
+        System.loadLibrary("jpgt");
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -74,6 +77,7 @@ public class Boxa {
      * Returns an {@link android.graphics.Rect} containing the coordinates
      * of this box.
      *
+     * @param index which box element to refer to
      * @return a rect representing the box
      */
     public Rect getRect(int index) {
@@ -89,6 +93,7 @@ public class Boxa {
      * Returns an array containing the coordinates of this box. See INDEX_*
      * constants for indices.
      *
+     * @param index which box element to refer to
      * @return an array of box coordinates
      */
     public int[] getGeometry(int index) {
@@ -108,6 +113,7 @@ public class Boxa {
      * Fills an array containing the coordinates of this box. See INDEX_*
      * constants for indices.
      *
+     * @param index which box element to refer to
      * @param geometry A 4+ element integer array to fill with coordinates.
      * @return <code>true</code> on success
      */

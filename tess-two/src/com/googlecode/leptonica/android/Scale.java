@@ -23,6 +23,8 @@ package com.googlecode.leptonica.android;
  */
 public class Scale {
     static {
+        System.loadLibrary("jpgt");
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -72,10 +74,12 @@ public class Scale {
                 break;
             case FIT:
                 scaleX = Math.min(scaleX, scaleY);
+                //noinspection SuspiciousNameCombination
                 scaleY = scaleX;
                 break;
             case FIT_SHRINK:
                 scaleX = Math.min(1.0f, Math.min(scaleX, scaleY));
+                //noinspection SuspiciousNameCombination
                 scaleY = scaleX;
                 break;
         }

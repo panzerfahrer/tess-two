@@ -21,8 +21,11 @@ package com.googlecode.leptonica.android;
  *
  * @author alanv@google.com (Alan Viverette)
  */
+@SuppressWarnings("WeakerAccess")
 public class Enhance {
     static {
+        System.loadLibrary("jpgt");
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
@@ -57,6 +60,7 @@ public class Enhance {
      * &lt; <code>fract</code> &lt; 0.7</li>
      * </ul>
      *
+     * @param pixs The source image
      * @param halfwidth The half-width of the smoothing filter.
      * @param fraction The fraction of edge to be added back into the source
      *            image.

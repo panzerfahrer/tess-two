@@ -24,8 +24,11 @@ import android.util.Log;
  *
  * @author alanv@google.com (Alan Viverette)
  */
+@SuppressWarnings("WeakerAccess")
 public class Box {
     static {
+        System.loadLibrary("jpgt");
+        System.loadLibrary("pngt");
         System.loadLibrary("lept");
     }
 
