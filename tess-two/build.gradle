@@ -1,13 +1,3 @@
-buildscript {
-    repositories {
-        jcenter()
-    }
-    dependencies {
-        classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.2'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.3'
-    }
-}
-
 import org.apache.tools.ant.taskdefs.condition.Os
 
 buildscript {
@@ -15,9 +5,9 @@ buildscript {
         jcenter()
     }
     dependencies {
-        classpath 'com.android.tools.build:gradle:2.1.0'
+        classpath 'com.android.tools.build:gradle:2.1.3'
         classpath 'com.jfrog.bintray.gradle:gradle-bintray-plugin:1.2'
-        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.3'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.4.1'
     }
 }
 
@@ -25,22 +15,20 @@ apply plugin: 'com.android.library'
 apply plugin: 'com.github.dcendents.android-maven'
 apply plugin: 'com.jfrog.bintray'
 
+Properties properties = new Properties()
+properties.load(project.rootProject.file('local.properties').newDataInputStream())
+
 android {
-    compileSdkVersion Integer.parseInt(project.ANDROID_BUILD_SDK_VERSION)
-    buildToolsVersion project.ANDROID_BUILD_TOOLS_VERSION
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
 
     defaultConfig {
         minSdkVersion 9
         targetSdkVersion 22
         versionCode 1
         versionName "1.0"
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
-        }
+        proguardFiles 'proguard-rules.pro'
+        consumerProguardFiles 'proguard-rules.pro'
     }
 
     sourceSets {
@@ -55,28 +43,32 @@ android {
 
     // Call external ndk-build(.cmd) script to build the native code
     task ndkBuild(type: Exec) {
-        def ndkBuildExt = Os.isFamily(Os.FAMILY_WINDOWS) ? ".cmd" : ""
-        def ndkBuild = file("${android.sdkDirectory}/ndk-bundle/ndk-build${ndkBuildExt}")
+        def ndkDirProperty = properties.getProperty('ndk.dir')
+        def ndkDirPrefix = ndkDirProperty != null ? ndkDirProperty + '/' : ''
 
-        commandLine ndkBuild.absolutePath, '-C', file('.').absolutePath,
-                '-j', Runtime.runtime.availableProcessors()
+        def ndkBuildExt = Os.isFamily(Os.FAMILY_WINDOWS) ? ".cmd" : ""
+
+        commandLine "${ndkDirPrefix}ndk-build${ndkBuildExt}", '-C', file('.').absolutePath,
+				'-j', Runtime.runtime.availableProcessors()
     }
 
-    /*tasks.withType(JavaCompile) {
+    tasks.withType(JavaCompile) {
         compileTask -> compileTask.dependsOn ndkBuild
-    }*/
+    }
 
     // Cleanup task to remove previously generated binaries
     task ndkClean(type: Exec) {
-        def ndkBuildExt = Os.isFamily(Os.FAMILY_WINDOWS) ? ".cmd" : ""
-        def ndkBuild = file("${android.sdkDirectory}/ndk-bundle/ndk-build${ndkBuildExt}")
+        def ndkDirProperty = properties.getProperty('ndk.dir')
+        def ndkDirPrefix = ndkDirProperty != null ? ndkDirProperty + '/' : ''
 
-        commandLine ndkBuild.absolutePath, '-C', file('.').absolutePath, 'clean'
+        def ndkBuildExt = Os.isFamily(Os.FAMILY_WINDOWS) ? ".cmd" : ""
+
+        commandLine "${ndkDirPrefix}ndk-build${ndkBuildExt}", '-C', file('.').absolutePath, 'clean'
     }
 
-    /*tasks.withType(Delete) {
+    tasks.withType(Delete) {
         cleanTask -> cleanTask.dependsOn ndkClean
-    }*/
+    } 
 }
 
 dependencies {
@@ -140,9 +132,6 @@ install {
         }
     }
 }
-
-Properties properties = new Properties()
-properties.load(project.rootProject.file('local.properties').newDataInputStream())
 
 bintray {
     user = properties.getProperty("bintray.user")

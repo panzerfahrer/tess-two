@@ -33,7 +33,7 @@ To use tess-two from your app, edit your app module's `build.gradle` file to add
 tess-two as an external dependency:
 
 	dependencies {
-	    compile 'com.rmtheis:tess-two:6.0.3'
+	    compile 'com.rmtheis:tess-two:6.0.4'
 	}
 	
 [Javadoc][javadoc] is available.
@@ -80,7 +80,7 @@ submitting a pull request through GitHub.
 [tesseract-android-tools]: https://github.com/alanv/tesseract-android-tools
 [tesseract-ocr]: https://github.com/tesseract-ocr/tesseract
 [leptonica]: https://github.com/DanBloomberg/leptonica
-[eyes-free]: https://code.google.com/p/eyes-free/
+[eyes-free]: https://github.com/rmtheis/eyes-free
 [tessdata]: https://github.com/tesseract-ocr/tessdata
 [javadoc]: https://rmtheis.github.io/tess-two/javadoc/index.html
 [semantic-versioning]: http://semver.org
